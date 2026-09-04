@@ -1,430 +1,230 @@
-<!doctype html>
-<html lang="my">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Akk Shopping</title>
+import os, textwrap, zipfile, json
+
+root="/mnt/data/akk-shopping-realtime"
+os.makedirs(root+"/public", exist_ok=True)
+
+server = r'''const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const Database = require("better-sqlite3");
+const path = require("path");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+const db = new Database(path.join(__dirname, "akk-shopping.db"));
+
+app.use(express.json({limit:"5mb"}));
+app.use(express.static(path.join(__dirname, "public")));
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  phone TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS orders (
+  id TEXT PRIMARY KEY,
+  customer_id INTEGER,
+  amount REAL DEFAULT 0,
+  payment_method TEXT,
+  payment_status TEXT DEFAULT 'Pending Verification',
+  order_status TEXT DEFAULT 'Pending Verification',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL,
+  order_id TEXT,
+  sender TEXT NOT NULL,
+  message TEXT NOT NULL,
+  read_by_owner INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+const q = {
+  customer: db.prepare("SELECT * FROM customers WHERE id=?"),
+  findCustomer: db.prepare("SELECT * FROM customers WHERE phone=?"),
+  insertCustomer: db.prepare("INSERT INTO customers(name,phone) VALUES(?,?)"),
+  insertMessage: db.prepare("INSERT INTO messages(customer_id,order_id,sender,message) VALUES(?,?,?,?)"),
+  messages: db.prepare("SELECT * FROM messages WHERE customer_id=? ORDER BY id ASC"),
+  unread: db.prepare("SELECT COUNT(*) c FROM messages WHERE sender='customer' AND read_by_owner=0"),
+  markRead: db.prepare("UPDATE messages SET read_by_owner=1 WHERE customer_id=? AND sender='customer'"),
+  customers: db.prepare(`
+    SELECT c.id,c.name,c.phone,
+      (SELECT COUNT(*) FROM messages m WHERE m.customer_id=c.id AND m.sender='customer' AND m.read_by_owner=0) unread,
+      (SELECT message FROM messages m WHERE m.customer_id=c.id ORDER BY m.id DESC LIMIT 1) last_message
+    FROM customers c ORDER BY c.id DESC
+  `)
+};
+
+function customerOrCreate(name, phone) {
+  let c = q.findCustomer.get(phone);
+  if (!c) {
+    const r = q.insertCustomer.run(name || "Customer", phone || "guest-"+Date.now());
+    c = q.customer.get(r.lastInsertRowid);
+  }
+  return c;
+}
+
+app.get("/api/health", (req,res)=>res.json({ok:true, service:"Akk Shopping realtime backend"}));
+
+app.post("/api/customers", (req,res)=>{
+  const {name, phone} = req.body;
+  if (!name || !phone) return res.status(400).json({error:"name and phone are required"});
+  res.json(customerOrCreate(name, phone));
+});
+
+app.get("/api/customers", (req,res)=>res.json(q.customers.all()));
+
+app.get("/api/customers/:id/messages", (req,res)=>{
+  res.json(q.messages.all(req.params.id));
+});
+
+app.post("/api/messages", (req,res)=>{
+  const {customerId, orderId=null, message, sender="customer"} = req.body;
+  if (!customerId || !message) return res.status(400).json({error:"customerId and message are required"});
+  const info = q.insertMessage.run(customerId, orderId, sender, message);
+  const msg = db.prepare("SELECT * FROM messages WHERE id=?").get(info.lastInsertRowid);
+  io.emit("chat:new", msg);
+  if (sender === "customer") io.emit("owner:notification", {type:"new_message", customerId, message});
+  res.json(msg);
+});
+
+app.post("/api/customers/:id/read", (req,res)=>{
+  q.markRead.run(req.params.id);
+  io.emit("owner:unread", {count:q.unread.get().c});
+  res.json({ok:true});
+});
+
+app.get("/api/unread", (req,res)=>res.json({count:q.unread.get().c}));
+
+io.on("connection", socket=>{
+  socket.emit("owner:unread", {count:q.unread.get().c});
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, ()=>console.log(`Akk Shopping running: http://localhost:${PORT}`));
+'''
+
+package = r'''{
+  "name": "akk-shopping-realtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Akk Shopping realtime customer service backend",
+  "main": "server.js",
+  "scripts": {"start":"node server.js","dev":"node server.js"},
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.21.1",
+    "socket.io": "^4.8.1"
+  }
+}'''
+
+customer = r'''<!doctype html>
+<html lang="my"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Akk Shopping — Customer Chat</title>
+<script src="/socket.io/socket.io.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Myanmar:wght@400;500;600;700;800&display=swap');
-:root{--r:#c8102e;--g:#d5a52a;--d:#101b2b;--bg:#f7f8fa;--line:#e7e9ed}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:#202631;font-family:"Noto Sans Myanmar",system-ui,sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}.wrap{width:min(1180px,calc(100% - 28px));margin:auto}
-.top{background:var(--d);color:white;font-size:12px}.top .wrap{height:40px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.head{background:white;position:sticky;top:0;z-index:20;box-shadow:0 2px 12px #0000000d}.headrow{min-height:86px;display:flex;align-items:center;gap:22px}
-.logo{display:flex;align-items:center;gap:10px;min-width:230px}.logo i{width:48px;height:48px;border-radius:12px;background:linear-gradient(145deg,#f2c34c,#bd8500);display:grid;place-items:center;font-style:normal;font-size:25px}.logo b{font-size:23px;color:var(--r);display:block}.logo small{font-size:9px;color:#777}
-.search{display:flex;flex:1;height:47px}.search input{flex:1;border:1px solid #ddd;border-right:0;border-radius:10px 0 0 10px;padding:0 16px;background:#fafafa;outline:0}.search button{width:58px;border:0;background:var(--r);color:#fff;border-radius:0 10px 10px 0;font-size:20px}
-.actions{display:flex;gap:15px}.act{border:0;background:transparent;color:#666;position:relative}.act strong{display:block;font-size:21px}.act small{font-size:10px}.badge{position:absolute;right:-5px;top:-4px;background:var(--r);color:#fff;border-radius:20px;font-size:9px;min-width:17px;height:17px;display:grid;place-items:center}
-.nav{background:var(--r);color:white}.nav .wrap{display:flex;overflow:auto}.nav a{color:#fff;text-decoration:none;padding:13px 15px;white-space:nowrap;font-size:13px;font-weight:700}.nav a:hover,.nav a:first-child{color:#ffd55f}
-.hero{height:455px;position:relative;overflow:hidden;background:#33271f}.slide{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:.7s}.slide.on{opacity:1}.slide:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#000b,#0005,#0001)}.hero .wrap{position:relative;z-index:2;height:100%;display:flex;align-items:center}.heroText{color:white;max-width:590px;padding-bottom:25px}.heroText em{color:#ffd55f;font-size:27px}.heroText h1{font-size:43px;line-height:1.35;margin:7px 0 12px}.heroText p{font-size:15px;line-height:1.9;color:#eee}.btn{border:0;border-radius:9px;padding:12px 20px;font-weight:800}.red{background:var(--r);color:white}.white{background:white;color:var(--d);margin-left:8px}.arrow{position:absolute;z-index:3;top:50%;transform:translateY(-50%);width:42px;height:42px;border:0;border-radius:50%;background:#0007;color:#fff;font-size:27px}.left{left:20px}.right{right:20px}.dots{position:absolute;z-index:3;bottom:28px;left:50%;transform:translateX(-50%);display:flex;gap:7px}.dot{width:9px;height:9px;border:0;border-radius:50%;padding:0;background:white}.dot.on{background:var(--r)}
-.trust{margin-top:-38px;position:relative;z-index:5}.trustbox{background:white;border-radius:17px;box-shadow:0 12px 30px #101b2b14;display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden}.trustitem{padding:18px;display:flex;gap:10px;align-items:center;border-right:1px solid var(--line)}.trustitem:last-child{border:0}.trusticon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#fff0f2;color:var(--r);font-size:19px}.trustitem b{font-size:12px;display:block}.trustitem small{font-size:10px;color:#777}
-section{padding:45px 0 0}.secthead{display:flex;justify-content:space-between;align-items:end;margin-bottom:18px}.secthead h2{font-size:24px;margin:0}.secthead h2:after{content:"";display:block;width:48px;height:3px;background:var(--r);margin-top:8px}.all{color:var(--r);font-weight:800;font-size:12px}
-.cats{display:grid;grid-template-columns:repeat(8,1fr);gap:12px}.cat{background:white;border:1px solid var(--line);border-radius:13px;padding:12px 6px;text-align:center;cursor:pointer;transition:.2s}.cat:hover{transform:translateY(-3px);box-shadow:0 10px 25px #0000000d}.cat div{font-size:35px;height:58px}.cat span{font-size:11px;font-weight:700}
-.products{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.product{background:white;border:1px solid var(--line);border-radius:14px;overflow:hidden;transition:.2s}.product:hover{transform:translateY(-3px);box-shadow:0 12px 28px #00000010}.pic{height:190px;background:#f4f5f6;display:grid;place-items:center;font-size:72px;position:relative}.off{position:absolute;left:9px;top:9px;background:var(--r);color:white;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:800}.heart{position:absolute;right:9px;top:9px;border:0;background:white;border-radius:50%;width:32px;height:32px}.heart.on{color:var(--r)}.body{padding:12px}.name{font-size:13px;font-weight:800;min-height:40px}.stars{color:#f0aa00;font-size:12px;margin:7px 0}.price{color:var(--r);font-size:16px;font-weight:800}.old{color:#999;text-decoration:line-through;font-size:10px;margin-left:5px;font-weight:400}.add{width:100%;margin-top:10px;border:1px solid var(--r);background:white;color:var(--r);border-radius:7px;padding:8px;font-weight:800;font-size:11px}.add:hover{background:var(--r);color:white}
-.deal{background:white;border:1px solid var(--line);border-radius:16px;padding:17px}.timer{background:var(--r);color:white;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:800}
-.dest{margin-top:45px;padding:48px 0;color:white;background:linear-gradient(#101b2bcc,#101b2bdd),url('https://images.unsplash.com/photo-1540611025311-01df3cef54b5?auto=format&fit=crop&w=1800&q=85') center/cover}.destgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}.place{height:145px;border-radius:14px;overflow:hidden;position:relative}.place img{width:100%;height:100%;object-fit:cover}.place:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent,#000b)}.place span{position:absolute;z-index:2;bottom:9px;left:10px;font-size:12px;font-weight:800}
-footer{background:var(--d);color:white;padding:38px 0 18px;margin-top:0}.footgrid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:30px}.footgrid h3{margin:0 0 12px}.footgrid p,.footgrid li{font-size:12px;color:#cbd1da;line-height:1.8}.footgrid ul{list-style:none;padding:0;margin:0}.bottom{border-top:1px solid #ffffff1a;margin-top:25px;padding-top:14px;color:#9ca7b5;font-size:11px;display:flex;justify-content:space-between}
-.cart{position:fixed;right:16px;bottom:16px;width:355px;max-width:calc(100% - 22px);background:white;border-radius:16px;box-shadow:0 20px 60px #0004;z-index:40;display:none}.cart.open{display:block}.carthead{padding:15px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-weight:800}.x{border:0;background:#f1f2f4;border-radius:50%;width:30px;height:30px}.cartbody{max-height:330px;overflow:auto;padding:5px 14px}.row{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--line)}.thumb{width:46px;height:46px;background:#f3f4f5;border-radius:8px;display:grid;place-items:center;font-size:23px}.info{flex:1}.info b{display:block;font-size:11px}.info small{color:#777;font-size:10px}.qty{display:flex;gap:6px;align-items:center;margin-top:4px}.qty button{width:23px;height:23px;border:1px solid #ddd;background:white;border-radius:5px}.cartfoot{padding:14px;border-top:1px solid var(--line)}.total{display:flex;justify-content:space-between;font-weight:800;margin-bottom:10px}.checkout{width:100%;border:0;background:var(--r);color:white;border-radius:8px;padding:11px;font-weight:800}
-.overlay{position:fixed;inset:0;background:#0008;z-index:60;display:none;align-items:center;justify-content:center;padding:15px}.overlay.open{display:flex}.modal{width:min(690px,100%);max-height:92vh;overflow:auto;background:white;border-radius:16px}.mh{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}.mb{padding:18px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin-bottom:11px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:800;display:block;margin-bottom:5px}.field input,.field textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;outline:0}.pay{border:1px solid #ddd;border-radius:9px;padding:10px;margin-bottom:8px;cursor:pointer}.pay.sel{border:2px solid var(--r);background:#fff8f9}.pay b{font-size:12px}.pay strong{display:block;color:var(--r)}.upload{border:2px dashed #d8dce2;border-radius:10px;padding:18px;text-align:center;color:#777;font-size:12px}
-.toast{position:fixed;z-index:100;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;background:var(--d);color:white;padding:10px 15px;border-radius:9px;font-size:12px;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
-@media(max-width:1000px){.cats{grid-template-columns:repeat(4,1fr)}.products{grid-template-columns:repeat(3,1fr)}.destgrid{grid-template-columns:repeat(3,1fr)}.footgrid{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.top .wrap span:nth-child(2){display:none}.headrow{flex-wrap:wrap;padding:9px 0}.logo{min-width:auto}.search{order:3;flex-basis:100%}.hero{height:430px}.heroText h1{font-size:31px}.heroText em{font-size:21px}.trustbox{grid-template-columns:1fr 1fr}.trustitem{border-bottom:1px solid var(--line)}.products{grid-template-columns:repeat(2,1fr)}.pic{height:150px}.destgrid{grid-template-columns:1fr 1fr}.fields{grid-template-columns:1fr}.field.full{grid-column:auto}}
-@media(max-width:480px){.cats{grid-template-columns:repeat(4,1fr);gap:7px}.cat div{font-size:28px;height:48px}.cat span{font-size:9px}.heroText h1{font-size:27px}.actions{gap:7px}.act small{display:none}.footgrid{grid-template-columns:1fr}.bottom{flex-direction:column;gap:7px}}
-
-/* OWNER LOGIN + ADMIN PANEL */
-.owner-login-btn{border:0;background:#101b2b;color:#fff;border-radius:8px;padding:9px 13px;font-weight:800;font-size:11px}
-.admin-overlay{position:fixed;inset:0;background:#07101dcc;z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
-.admin-overlay.open{display:flex}
-.login-card{width:min(430px,100%);background:#fff;border-radius:18px;box-shadow:0 25px 80px #0006;overflow:hidden}
-.login-top{background:linear-gradient(135deg,#101b2b,#1e3048);color:#fff;padding:28px;text-align:center}
-.login-logo{font-size:42px}.login-top h2{margin:8px 0 3px}.login-top p{margin:0;color:#cbd4df;font-size:12px}
-.login-body{padding:25px}.login-body label{font-size:11px;font-weight:800;display:block;margin:10px 0 5px}.login-body input{width:100%;border:1px solid #ddd;border-radius:9px;padding:12px;outline:0}.login-body input:focus{border-color:var(--r)}
-.login-submit{width:100%;margin-top:18px;border:0;border-radius:9px;background:var(--r);color:#fff;padding:12px;font-weight:800}.login-note{font-size:10px;color:#777;margin-top:10px;text-align:center}
-.admin-panel{position:fixed;inset:0;background:#f4f6f8;z-index:190;display:none;overflow:auto}
-.admin-panel.open{display:block}
-.admin-head{height:70px;background:#101b2b;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:3}
-.admin-brand{font-size:20px;font-weight:800}.admin-brand span{color:#ffd55f}
-.admin-head-actions{display:flex;gap:9px}.admin-head-actions button{border:1px solid #ffffff33;background:#ffffff12;color:#fff;border-radius:8px;padding:8px 11px;font-size:11px}
-.admin-layout{display:grid;grid-template-columns:235px 1fr;min-height:calc(100vh - 70px)}
-.admin-side{background:#fff;border-right:1px solid #e2e5e9;padding:18px 12px}
-.admin-side button{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:8px;padding:11px 12px;margin:3px 0;font-size:12px;font-weight:700;color:#4d5662}.admin-side button:hover,.admin-side button.active{background:#fff0f2;color:var(--r)}
-.admin-main{padding:24px;max-width:1400px;width:100%;margin:auto}
-.admin-title{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px}.admin-title h1{margin:0;font-size:24px}.admin-title small{color:#77808c}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.stat{background:#fff;border:1px solid #e5e8ec;border-radius:13px;padding:17px}.stat small{color:#737b86;font-size:11px}.stat b{display:block;font-size:24px;margin-top:6px}.stat em{font-style:normal;color:#16a05d;font-size:10px}
-.admin-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}.admin-card{background:#fff;border:1px solid #e5e8ec;border-radius:13px;padding:18px}.admin-card h3{margin:0 0 15px;font-size:15px}
-.payment-item,.order-item{border:1px solid #e7e9ed;border-radius:10px;padding:12px;margin-bottom:9px}.payment-item{display:grid;grid-template-columns:1fr auto;gap:12px}.payment-item b,.order-item b{font-size:12px}.payment-meta{font-size:10px;color:#777;line-height:1.7}.status{display:inline-block;padding:4px 7px;border-radius:5px;font-size:9px;font-weight:800;background:#fff2d7;color:#9a6900}.status.ok{background:#e8f8ef;color:#16864e}.status.reject{background:#ffe8eb;color:#b51630}.admin-btn{border:0;border-radius:7px;padding:7px 9px;font-size:10px;font-weight:800}.verify{background:#16864e;color:#fff}.reject{background:#fff0f2;color:var(--r)}.receipt-preview{margin-top:7px;border:1px dashed #ccd2d9;border-radius:7px;padding:8px;color:#777;font-size:10px}
-.empty-admin{text-align:center;padding:28px;color:#89919b;font-size:12px}
-.admin-section{display:none}.admin-section.active{display:block}
-@media(max-width:800px){.admin-layout{grid-template-columns:1fr}.admin-side{display:flex;overflow:auto;gap:5px;border-right:0;border-bottom:1px solid #e2e5e9}.admin-side button{min-width:max-content}.stats{grid-template-columns:1fr 1fr}.admin-grid{grid-template-columns:1fr}.admin-main{padding:15px}}
-@media(max-width:480px){.stats{grid-template-columns:1fr}.payment-item{grid-template-columns:1fr}.admin-head{padding:0 12px}.admin-brand{font-size:16px}}
-
-
-/* LIVE CUSTOMER CHAT */
-.chat-fab{position:fixed;right:20px;bottom:20px;z-index:45;width:58px;height:58px;border:0;border-radius:50%;background:var(--r);color:#fff;box-shadow:0 12px 30px #0004;font-size:23px}.chat-count{position:absolute;right:-2px;top:-3px;background:#ffd34f;color:#111;border-radius:20px;min-width:19px;height:19px;font-size:9px;display:grid;place-items:center;font-weight:900}
-.chat-box{position:fixed;right:20px;bottom:88px;width:355px;max-width:calc(100% - 25px);height:500px;background:#fff;border-radius:17px;box-shadow:0 20px 65px #0004;z-index:50;display:none;overflow:hidden}.chat-box.open{display:flex;flex-direction:column}
-.chat-head{background:var(--d);color:#fff;padding:14px;display:flex;align-items:center;justify-content:space-between}.chat-agent{display:flex;gap:9px;align-items:center}.agent-avatar{width:38px;height:38px;border-radius:50%;background:#fff;display:grid;place-items:center;color:var(--r);font-size:20px}.chat-head b{font-size:12px;display:block}.online{font-size:9px;color:#79e6a8}.chat-close{border:0;background:#ffffff18;color:#fff;width:30px;height:30px;border-radius:50%}
-.chat-messages{flex:1;overflow:auto;background:#f6f7f9;padding:13px}.msg{display:flex;margin:8px 0}.msg.customer{justify-content:flex-end}.bubble{max-width:78%;padding:9px 11px;border-radius:12px;font-size:11px;line-height:1.6;background:#fff;border:1px solid #e5e7eb}.msg.customer .bubble{background:#fff0f2;border-color:#ffd6dc}.msg small{display:block;color:#999;font-size:8px;margin-top:3px}
-.quick{display:flex;gap:6px;padding:7px 10px;overflow:auto;border-top:1px solid #eee}.quick button{white-space:nowrap;border:1px solid #ddd;background:#fff;border-radius:15px;padding:5px 8px;font-size:9px}
-.chat-compose{display:flex;gap:7px;padding:9px;border-top:1px solid #ddd}.chat-compose input{flex:1;border:1px solid #ddd;border-radius:20px;padding:8px 12px;outline:0;font-size:11px}.chat-compose button{width:38px;border:0;border-radius:50%;background:var(--r);color:#fff}
-.admin-chat{display:grid;grid-template-columns:210px 1fr;gap:12px;min-height:450px}.chat-list{border-right:1px solid #e5e8ec;padding-right:10px;overflow:auto}.chat-user{padding:10px;border-radius:8px;cursor:pointer;border:1px solid transparent;margin-bottom:5px}.chat-user:hover,.chat-user.sel{background:#fff0f2;border-color:#ffd7dd}.chat-user b{display:block;font-size:11px}.chat-user small{font-size:9px;color:#888}.admin-chat-window{border:1px solid #e5e8ec;border-radius:10px;display:flex;flex-direction:column;overflow:hidden}.admin-chat-head{padding:11px;border-bottom:1px solid #e5e8ec;font-size:11px;font-weight:800}.admin-chat-messages{flex:1;padding:12px;overflow:auto;background:#f8f9fa}.admin-compose{display:flex;gap:7px;padding:9px;border-top:1px solid #ddd}.admin-compose input{flex:1;border:1px solid #ddd;border-radius:7px;padding:8px;font-size:10px}.admin-compose button{border:0;border-radius:7px;background:var(--r);color:#fff;padding:8px 12px;font-size:10px;font-weight:800}
-@media(max-width:700px){.chat-box{right:10px;bottom:80px;width:calc(100% - 20px);height:70vh}.admin-chat{grid-template-columns:1fr}.chat-list{border-right:0;border-bottom:1px solid #e5e8ec;max-height:130px;padding:0 0 8px;display:flex;overflow:auto;gap:6px}.chat-user{min-width:140px}}
-
-</style>
-</head>
-<body>
-<div class="top"><div class="wrap"><span>👋 Akk Shopping မှ ကြိုဆိုပါတယ်</span><span>🚚 တစ်နိုင်ငံလုံး ပို့ဆောင်ပေးပါသည်</span><span>📞 09-793306685　✉️ yuetingdiana@gmail.com</span></div></div>
-<header class="head"><div class="wrap headrow">
-<a class="logo" href="#"><i>🛍️</i><div><b>Akk Shopping</b><small>အရည်အသွေးကောင်း • စျေးနှုန်းသင့် • ယုံကြည်စိတ်ချရ</small></div></a>
-<div class="search"><input id="search" placeholder="ကုန်ပစ္စည်းများ ရှာရန်..." oninput="search(this.value)"><button onclick="search(document.getElementById('search').value)">🔍</button></div>
-<div class="actions"><button class="owner-login-btn" onclick="openOwnerLogin()">👑 Owner</button><button class="act" onclick="toast('Wishlist')"><strong>♡</strong><small>စိတ်ကြိုက်</small><i class="badge" id="wish">0</i></button><button class="act" onclick="cartToggle()"><strong>🛒</strong><small>စျေးဝယ်တောင်း</small><i class="badge" id="cc">0</i></button><button class="act" onclick="checkout()"><strong>👤</strong><small>အကောင့်</small></button></div>
-</div></header>
-<nav class="nav"><div class="wrap"><a href="#home">☰ အမျိုးအစားများ</a><a href="#deals">ပရိုမိုးရှင်း</a><a href="#products">ကုန်ပစ္စည်းများ</a><a href="#new">အသစ်ရောက်</a><a href="#destinations">မြန်မာ့အလှ</a><a href="#contact">ဆက်သွယ်ရန်</a></div></nav>
-
-<section class="hero" id="home">
-<div class="slide on" style="background-image:url('https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=1800&q=85')"></div>
-<div class="slide" style="background-image:url('https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=1800&q=85')"></div>
-<div class="slide" style="background-image:url('https://images.unsplash.com/photo-1577083552431-6e5fd01988b5?auto=format&fit=crop&w=1800&q=85')"></div>
-<div class="wrap"><div class="heroText"><em>Akk Shopping</em><h1>မြန်မာ့အလှနဲ့<br>အကောင်းဆုံး ရွေးချယ်ခြင်း</h1><p>နေ့စဉ်လိုအပ်သမျှ ကုန်ပစ္စည်းကောင်းများကို တစ်နေရာတည်းမှာ လွယ်ကူစွာ စျေးဝယ်လိုက်ပါ။</p><button class="btn red" onclick="document.getElementById('products').scrollIntoView()">🛍️ အခုပဲ စျေးဝယ်မယ်</button><button class="btn white" onclick="document.getElementById('destinations').scrollIntoView()">▶ မြန်မာ့အလှကြည့်မယ်</button></div></div>
-<button class="arrow left" onclick="move(-1)">‹</button><button class="arrow right" onclick="move(1)">›</button><div class="dots" id="dots"></div>
-</section>
-
-<div class="trust"><div class="wrap"><div class="trustbox"><div class="trustitem"><div class="trusticon">🚚</div><div><b>အမြန်ပို့ဆောင်ခြင်း</b><small>တစ်နိုင်ငံလုံး</small></div></div><div class="trustitem"><div class="trusticon">🛡️</div><div><b>လုံခြုံစိတ်ချရ</b><small>100% ယုံကြည်စိတ်ချ</small></div></div><div class="trustitem"><div class="trusticon">🎧</div><div><b>24/7 ဝန်ဆောင်မှု</b><small>အကူအညီပေးရန်</small></div></div><div class="trustitem"><div class="trusticon">↩️</div><div><b>ပြန်လဲနိုင်ခြင်း</b><small>စည်းကမ်းချက်များအရ</small></div></div></div></div></div>
-
-<section><div class="wrap"><div class="secthead"><h2>အမျိုးအစားများ</h2><span class="all">အားလုံးကြည့်ရန် →</span></div><div class="cats">
-<div class="cat" onclick="filterCat('အစားအသောက်')"><div>🥬</div><span>အစားအသောက်</span></div><div class="cat" onclick="filterCat('အချိုရည်')"><div>🥤</div><span>အချိုရည်</span></div><div class="cat" onclick="filterCat('မုန့်')"><div>🍪</div><span>မုန့် & Snacks</span></div><div class="cat" onclick="filterCat('ကိုယ်ရေး')"><div>🧴</div><span>ကိုယ်ရေးသုံး</span></div><div class="cat" onclick="filterCat('အိမ်သုံး')"><div>🏠</div><span>အိမ်သုံး</span></div><div class="cat" onclick="filterCat('မီးဖို')"><div>🍳</div><span>မီးဖိုချောင်</span></div><div class="cat" onclick="filterCat('ဖက်ရှင်')"><div>👕</div><span>ဖက်ရှင်</span></div><div class="cat" onclick="filterCat('အီလက်ထရောနစ်')"><div>📱</div><span>အီလက်ထရောနစ်</span></div>
-</div></div></section>
-
-<section id="deals"><div class="wrap"><div class="secthead"><h2>ယနေ့အထူးလျှော့စျေး</h2><span class="timer">⏱ 12 : 45 : 30</span></div><div class="deal"><div class="products" id="dealsGrid"></div></div></div></section>
-<section id="products"><div class="wrap"><div class="secthead"><h2>အထူးအကြံပြုကုန်ပစ္စည်းများ</h2><a class="all" href="#" onclick="reset();return false">အားလုံးကြည့်ရန် →</a></div><div class="products" id="grid"></div></div></section>
-<section id="new"><div class="wrap"><div class="secthead"><h2>အသစ်ရောက်ကုန်ပစ္စည်းများ</h2></div><div class="products" id="newGrid"></div></div></section>
-
-<section class="dest" id="destinations"><div class="wrap"><div class="secthead"><h2 style="color:white">မြန်မာနိုင်ငံ၏ အလှအပနေရာများ</h2><span style="color:#ffd55f;font-size:12px">Our Beautiful Myanmar</span></div><div class="destgrid">
-<div class="place"><img src="https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=700&q=80"><span>ပုဂံ (Bagan)</span></div>
-<div class="place"><img src="https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=700&q=80"><span>အင်းလေး (Inle Lake)</span></div>
-<div class="place"><img src="https://images.unsplash.com/photo-1577083552431-6e5fd01988b5?auto=format&fit=crop&w=700&q=80"><span>ရန်ကုန် (Yangon)</span></div>
-<div class="place"><img src="https://images.unsplash.com/photo-1562602833-0f4ab2fc46e3?auto=format&fit=crop&w=700&q=80"><span>မန္တလေး (Mandalay)</span></div>
-<div class="place"><img src="https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=700&q=80"><span>ကျိုက်ထီးရိုး (Golden Rock)</span></div>
-<div class="place"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80"><span>ငပလီ (Ngapali Beach)</span></div>
-</div></div></section>
-
-<aside class="cart" id="cart"><div class="carthead">🛒 စျေးဝယ်ခြင်းတောင်း <button class="x" onclick="cartToggle()">×</button></div><div class="cartbody" id="cartBody"></div><div class="cartfoot"><div class="total"><span>စုစုပေါင်း</span><span id="total">0 ကျပ်</span></div><button class="checkout" onclick="checkout()">ငွေပေးချေပြီး အမှာစာတင်မည်</button></div></aside>
-
-<div class="overlay" id="overlay"><div class="modal"><div class="mh"><b>🧾 အမှာစာတင်ရန်</b><button class="x" onclick="closeModal()">×</button></div><div class="mb"><div class="fields">
-<div class="field"><label>အမည်</label><input id="name" placeholder="သင့်အမည်"></div><div class="field"><label>ဖုန်းနံပါတ်</label><input id="phone" placeholder="09xxxxxxxxx"></div>
-<div class="field full"><label>ပို့ဆောင်ရမည့်လိပ်စာ</label><textarea id="address" rows="3" placeholder="အပြည့်အစုံရေးပါ"></textarea></div>
-<div class="field full"><label>ငွေပေးချေမှုနည်းလမ်း</label><div class="pay sel" onclick="pay(this)"><b>💙 KPay</b><strong>09-793306685</strong></div><div class="pay" onclick="pay(this)"><b>💛 Wave Pay</b><strong>09-793306685</strong></div><div class="pay" onclick="pay(this)"><b>🏦 Banking — BNY</b><strong>ဘဏ်မှတစ်ဆင့် ငွေလွှဲနိုင်ပါသည်</strong></div></div>
-<div class="field full"><label>ငွေလွှဲအထောက်အထား (Receipt) တင်ရန်</label><div class="upload">📎 ငွေလွှဲပြီးပါက Receipt / Screenshot တင်ပေးပါ။<br><input id="receipt" type="file" accept="image/*,.pdf"></div></div>
-</div><button class="checkout" onclick="submitOrder()">အမှာစာတင်ပြီး အတည်ပြုရန်</button></div></div></div>
-
-
-<!-- OWNER LOGIN -->
-<div class="admin-overlay" id="ownerLogin">
-  <div class="login-card">
-    <div class="login-top">
-      <div class="login-logo">👑</div>
-      <h2>Akk Shopping Owner</h2>
-      <p>ပိုင်ရှင် / Admin Control Panel</p>
-    </div>
-    <div class="login-body">
-      <label>Owner Username</label>
-      <input id="ownerUser" autocomplete="username" placeholder="Owner username">
-      <label>Password</label>
-      <input id="ownerPass" type="password" autocomplete="current-password" placeholder="Password">
-      <button class="login-submit" onclick="ownerLogin()">🔐 Login ဝင်မည်</button>
-      <div class="login-note">Demo version ဖြစ်သောကြောင့် Login ကို browser ထဲတွင်သာ စမ်းသပ်နိုင်ပါသည်။ Production တွင် secure backend authentication လိုအပ်ပါသည်။</div>
-    </div>
-  </div>
-</div>
-
-<!-- OWNER ADMIN PANEL -->
-<div class="admin-panel" id="adminPanel">
-  <div class="admin-head">
-    <div class="admin-brand">👑 <span>Akk Shopping</span> Owner Panel</div>
-    <div class="admin-head-actions">
-      <button onclick="adminView('dashboard')">🏠 Dashboard</button>
-      <button onclick="closeAdmin()">Website</button>
-      <button onclick="ownerLogout()">Logout</button>
-    </div>
-  </div>
-  <div class="admin-layout">
-    <aside class="admin-side">
-      <button class="active" data-view="dashboard" onclick="adminView('dashboard')">📊 Dashboard</button>
-      <button data-view="payments" onclick="adminView('payments')">💰 Payments</button>
-      <button data-view="orders" onclick="adminView('orders')">📦 Orders</button>
-      <button data-view="products" onclick="adminView('products')">🛍️ Products</button>
-      <button data-view="customers" onclick="adminView('customers')">👥 Customers</button>
-      <button data-view="support" onclick="adminView('support')">💬 Customer Service</button>
-      <button data-view="settings" onclick="adminView('settings')">⚙️ Settings</button>
-    </aside>
-    <main class="admin-main">
-
-      <section class="admin-section active" id="admin-dashboard">
-        <div class="admin-title"><div><h1>Owner Dashboard</h1><small>ဆိုင်ရဲ့ လုပ်ငန်းအခြေအနေကို တစ်နေရာတည်းက ထိန်းချုပ်ပါ</small></div></div>
-        <div class="stats">
-          <div class="stat"><small>ယနေ့ရောင်းအား</small><b id="statSales">0 ကျပ်</b><em>↑ Demo data</em></div>
-          <div class="stat"><small>စုစုပေါင်း Orders</small><b id="statOrders">0</b><em>Live local demo</em></div>
-          <div class="stat"><small>စစ်ဆေးရန် Payments</small><b id="statPending">0</b><em>Receipt verification</em></div>
-          <div class="stat"><small>Customers</small><b id="statCustomers">0</b><em>Local demo</em></div>
-        </div>
-        <div class="admin-grid">
-          <div class="admin-card"><h3>🔔 နောက်ဆုံး Payment များ</h3><div id="dashPayments"></div></div>
-          <div class="admin-card"><h3>📦 နောက်ဆုံး Orders</h3><div id="dashOrders"></div></div>
-        </div>
-      </section>
-
-      <section class="admin-section" id="admin-payments">
-        <div class="admin-title"><div><h1>💰 Payment Management</h1><small>Customer Receipt များကို စစ်ဆေးပြီး Verify / Reject လုပ်ပါ</small></div></div>
-        <div class="admin-card"><h3>Payment Verification Queue</h3><div id="paymentList"></div></div>
-      </section>
-
-      <section class="admin-section" id="admin-orders">
-        <div class="admin-title"><div><h1>📦 Order Management</h1><small>အမှာစာအခြေအနေကို ပြောင်းလဲနိုင်ပါသည်</small></div></div>
-        <div class="admin-card"><h3>Customer Orders</h3><div id="orderList"></div></div>
-      </section>
-
-      <section class="admin-section" id="admin-products">
-        <div class="admin-title"><div><h1>🛍️ Product Management</h1><small>Product, Price, Stock နှင့် Promotion များကို စီမံပါ</small></div><button class="admin-btn verify" onclick="toast('Production version တွင် Add Product form ချိတ်ဆက်နိုင်ပါသည်')">＋ Product အသစ်</button></div>
-        <div class="admin-card"><h3>လက်ရှိကုန်ပစ္စည်းများ</h3><div id="adminProducts"></div></div>
-      </section>
-
-      <section class="admin-section" id="admin-customers">
-        <div class="admin-title"><div><h1>👥 Customers</h1><small>Customer order history နှင့် ဆက်သွယ်မှုများ</small></div></div>
-        <div class="admin-card"><h3>Customer List</h3><div id="customerList"></div></div>
-      </section>
-
-      <section class="admin-section" id="admin-support">
-        <div class="admin-title"><div><h1>💬 Customer Service</h1><small>ဖောက်သည်မေးမြန်းမှုများကို စီမံပါ</small></div></div>
-        <div class="admin-card"><h3>Support Center</h3><div class="empty-admin">Demo version တွင် message database မချိတ်ရသေးပါ။ Production backend ချိတ်ပြီး Customer Chat / Email / Telegram notification ထည့်နိုင်ပါသည်။</div></div>
-      </section>
-
-      <section class="admin-section" id="admin-settings">
-        <div class="admin-title"><div><h1>⚙️ Store Settings</h1><small>ဆိုင်အချက်အလက်များ</small></div></div>
-        <div class="admin-card">
-          <h3>Payment Accounts</h3>
-          <div class="payment-item"><div><b>💙 KPay</b><div class="payment-meta">09-793306685</div></div><span class="status ok">ACTIVE</span></div>
-          <div class="payment-item"><div><b>💛 Wave Pay</b><div class="payment-meta">09-793306685</div></div><span class="status ok">ACTIVE</span></div>
-          <div class="payment-item"><div><b>🏦 Banking</b><div class="payment-meta">BNY</div></div><span class="status ok">ACTIVE</span></div>
-          <div class="payment-item"><div><b>📞 Customer Service</b><div class="payment-meta">09-793306685</div></div><span class="status ok">ACTIVE</span></div>
-        </div>
-      </section>
-
-    </main>
-  </div>
-</div>
-
-
-<!-- CUSTOMER LIVE CHAT -->
-<button class="chat-fab" onclick="toggleChat()" aria-label="Customer Service">💬<span class="chat-count" id="chatCount">0</span></button>
-<div class="chat-box" id="chatBox">
-  <div class="chat-head">
-    <div class="chat-agent"><div class="agent-avatar">🎧</div><div><b>Akk Shopping Customer Service</b><span class="online">● Online • အမြန်ဆုံးပြန်လည်ဖြေကြားပေးပါမည်</span></div></div>
-    <button class="chat-close" onclick="toggleChat()">×</button>
-  </div>
-  <div class="chat-messages" id="customerMessages"></div>
-  <div class="quick">
-    <button onclick="quickChat('ကျွန်တော်/ကျွန်မ Order အခြေအနေ သိချင်ပါတယ်')">📦 Order အခြေအနေ</button>
-    <button onclick="quickChat('Payment လုပ်ပြီးပါပြီ')">💰 Payment</button>
-    <button onclick="quickChat('ပစ္စည်းအကြောင်း မေးချင်ပါတယ်')">🛍️ Product</button>
-  </div>
-  <div class="chat-compose"><input id="chatInput" placeholder="မေးချင်တာ ရိုက်ထည့်ပါ..." onkeydown="if(event.key==='Enter')sendChat()"><button onclick="sendChat()">➤</button></div>
-</div>
-
-<footer id="contact"><div class="wrap"><div class="footgrid"><div><h3>Akk Shopping</h3><p>မြန်မာ့အလှ၊ ယုံကြည်စိတ်ချရမှုနဲ့ ခေတ်မီစျေးဝယ်အတွေ့အကြုံကို တစ်နေရာတည်းမှာ ပေးစွမ်းပေးနေပါသည်။</p></div><div><h3>အကူအညီ</h3><ul><li>အမှာစာခြေရာခံရန်</li><li>ပြန်လဲ/ပြန်အမ်းမူဝါဒ</li><li>အမေးများသောမေးခွန်းများ</li></ul></div><div><h3>ဆက်သွယ်ရန်</h3><ul><li>📞 09-793306685</li><li>✉️ yuetingdiana@gmail.com</li><li>Telegram: @Akkl10</li></ul></div><div><h3>ငွေပေးချေမှု</h3><p>💙 KPay</p><p>💛 Wave Pay</p><p>🏦 BNY Banking</p><p>🔒 လုံခြုံစိတ်ချရသော ငွေပေးချေမှု</p></div></div><div class="bottom"><span>© 2026 Akk Shopping. All rights reserved.</span><span>Privacy • Terms • Customer Service</span></div></div></footer>
-<div class="toast" id="toast"></div>
-
+body{font-family:system-ui,sans-serif;background:#f6f7f9;margin:0;color:#20242a}.wrap{max-width:760px;margin:40px auto;padding:20px}
+.card{background:white;border:1px solid #e4e7eb;border-radius:18px;padding:22px;box-shadow:0 10px 30px #0000000b}
+h1{margin-top:0}.row{display:flex;gap:10px;margin:10px 0}.row>*{flex:1;padding:12px;border:1px solid #ddd;border-radius:10px}
+#messages{height:430px;overflow:auto;padding:10px;background:#fafafa;border-radius:12px}.msg{max-width:75%;padding:10px 13px;border-radius:14px;margin:8px}.customer{margin-left:auto;background:#111;color:#fff}.owner{background:#e8edf3}
+button{background:#111;color:#fff;border:0;cursor:pointer;font-weight:700}
+small{color:#77808b}
+</style></head><body><div class="wrap"><div class="card">
+<h1>🛍️ Akk Shopping</h1><small>Customer Service — Real-time Chat</small>
+<div class="row"><input id="name" placeholder="အမည်"><input id="phone" placeholder="ဖုန်းနံပါတ်"><input id="order" placeholder="Order ID (ရှိရင်)"></div>
+<button onclick="start()">Chat စတင်မည်</button>
+<hr><div id="messages"></div>
+<div class="row"><input id="text" placeholder="မေးမြန်းလိုတာ ရေးပါ..." onkeydown="if(event.key==='Enter')send()"><button onclick="send()">ပို့မည်</button></div>
+</div></div>
 <script>
-const P=[
-{id:1,n:"ပုစွန်ဆီ (5Kg)",c:"အစားအသောက်",p:4800,o:6000,d:"-20%",e:"🌾",r:5},
-{id:2,n:"စားသုံးဆီ (1L)",c:"အစားအသောက်",p:3400,o:4000,d:"-15%",e:"🧴",r:5},
-{id:3,n:"NESCAFÉ Classic (200g)",c:"အချိုရည်",p:7200,o:8000,d:"-10%",e:"☕",r:5},
-{id:4,n:"MAMA ခေါက်ဆွဲ (10 ထုပ်)",c:"မုန့်",p:2250,o:3000,d:"-25%",e:"🍜",r:4},
-{id:5,n:"နေကာမျက်မှန်",c:"ဖက်ရှင်",p:9500,o:12000,d:"-21%",e:"🕶️",r:5},
-{id:6,n:"Bluetooth နားကြပ်",c:"အီလက်ထရောနစ်",p:18500,o:22000,d:"-16%",e:"🎧",r:5},
-{id:7,n:"ကျောပိုးအိတ်",c:"ဖက်ရှင်",p:22000,o:28000,d:"-21%",e:"🎒",r:5},
-{id:8,n:"Smart Watch Series 8",c:"အီလက်ထရောနစ်",p:55000,o:65000,d:"-15%",e:"⌚",r:5},
-{id:9,n:"အရည်အသွေးမြင့် ဆပ်ပြာ",c:"ကိုယ်ရေး",p:5800,o:7000,d:"-17%",e:"🧼",r:5},
-{id:10,n:"မီးဖိုချောင်အိုး",c:"မီးဖို",p:28000,o:35000,d:"-20%",e:"🍲",r:5},
-{id:11,n:"အိမ်သုံးထိုင်ခုံ",c:"အိမ်သုံး",p:45000,o:52000,d:"-13%",e:"🪑",r:4},
-{id:12,n:"လက်ကိုင်ဖုန်း",c:"အီလက်ထရောနစ်",p:390000,o:430000,d:"-9%",e:"📱",r:5}];
-let C=JSON.parse(localStorage.getItem("akkC")||"[]"),W=JSON.parse(localStorage.getItem("akkW")||"[]");
-const money=x=>x.toLocaleString()+" ကျပ်", stars=n=>"★".repeat(n)+"☆".repeat(5-n);
-function card(p){return `<article class="product"><div class="pic"><span class="off">${p.d}</span><button class="heart ${W.includes(p.id)?"on":""}" onclick="wish(${p.id})">${W.includes(p.id)?"♥":"♡"}</button><span>${p.e}</span></div><div class="body"><div class="name">${p.n}</div><div class="stars">${stars(p.r)} <small style="color:#999">(${p.r*3+2})</small></div><div class="price">${money(p.p)} <span class="old">${money(p.o)}</span></div><button class="add" onclick="add(${p.id})">＋ စျေးဝယ်ခြင်းတောင်းထဲထည့်မည်</button></div></article>`}
-function render(a=P){document.getElementById("grid").innerHTML=a.slice(0,8).map(card).join("");document.getElementById("dealsGrid").innerHTML=P.slice(0,4).map(card).join("");document.getElementById("newGrid").innerHTML=P.slice(4,12).map(card).join("")}
-function add(id){let x=C.find(v=>v.id===id);x?x.q++:C.push({id,q:1});save();toast("ကုန်ပစ္စည်းကို စျေးဝယ်ခြင်းတောင်းထဲ ထည့်ပြီးပါပြီ 🛒")}
-function wish(id){W=W.includes(id)?W.filter(x=>x!==id):[...W,id];save();render()}
-function filterCat(c){let a=P.filter(x=>x.c.includes(c));render(a);document.getElementById("products").scrollIntoView({behavior:"smooth"})}
-function search(q){q=q.toLowerCase();render(q?P.filter(x=>(x.n+x.c).toLowerCase().includes(q)):P)}
-function reset(){render(P)}
-function save(){localStorage.setItem("akkC",JSON.stringify(C));localStorage.setItem("akkW",JSON.stringify(W));update()}
-function update(){document.getElementById("cc").textContent=C.reduce((s,x)=>s+x.q,0);document.getElementById("wish").textContent=W.length;let b=document.getElementById("cartBody");if(!C.length)b.innerHTML="<div style='padding:25px;text-align:center;color:#888'>🛒 စျေးဝယ်ခြင်းတောင်း လွတ်နေပါသည်။</div>";else b.innerHTML=C.map(x=>{let p=P.find(v=>v.id===x.id);return `<div class="row"><div class="thumb">${p.e}</div><div class="info"><b>${p.n}</b><small>${money(p.p)}</small><div class="qty"><button onclick="qty(${p.id},-1)">−</button>${x.q}<button onclick="qty(${p.id},1)">+</button><button onclick="removeItem(${p.id})">×</button></div></div></div>`}).join("");document.getElementById("total").textContent=money(C.reduce((s,x)=>s+P.find(p=>p.id===x.id).p*x.q,0))}
-function qty(id,d){let x=C.find(v=>v.id===id);x.q+=d;if(x.q<1)C=C.filter(v=>v.id!==id);save()}function removeItem(id){C=C.filter(v=>v.id!==id);save()}
-function cartToggle(){document.getElementById("cart").classList.toggle("open")}
-function checkout(){if(!C.length){toast("အရင်ဆုံး ကုန်ပစ္စည်းတစ်ခု ထည့်ပေးပါ 🛒");return}document.getElementById("overlay").classList.add("open")}
-function closeModal(){document.getElementById("overlay").classList.remove("open")}
-function pay(el){document.querySelectorAll(".pay").forEach(x=>x.classList.remove("sel"));el.classList.add("sel")}
-function submitOrder(){if(!document.getElementById("name").value.trim()||!document.getElementById("phone").value.trim()||!document.getElementById("address").value.trim()||!document.getElementById("receipt").files.length){toast("အမည်၊ ဖုန်း၊ လိပ်စာနှင့် Receipt အားလုံးဖြည့်ပေးပါ။");return}let id="AKK-"+Math.floor(100000+Math.random()*900000);localStorage.setItem("akkOrder",JSON.stringify({id,status:"Payment စစ်ဆေးနေသည်",time:new Date().toLocaleString()}));C=[];save();closeModal();toast("အမှာစာ "+id+" တင်ပြီးပါပြီ။ Payment စစ်ဆေးနေပါသည်။")}
-function toast(s){let t=document.getElementById("toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2500)}
-let si=0,ss=document.querySelectorAll(".slide"),dd=document.getElementById("dots");ss.forEach((_,i)=>{let d=document.createElement("button");d.className="dot "+(!i?"on":"");d.onclick=()=>go(i);dd.appendChild(d)});function go(i){si=(i+ss.length)%ss.length;ss.forEach((x,j)=>x.classList.toggle("on",j===si));document.querySelectorAll(".dot").forEach((x,j)=>x.classList.toggle("on",j===si))}function move(n){go(si+n)}setInterval(()=>move(1),6000);
-render();update();
+const socket=io();let customer=null;
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function draw(list){messages.innerHTML=list.map(m=>`<div class="msg ${m.sender}">${esc(m.message)}<br><small>${m.created_at}</small></div>`).join("");messages.scrollTop=messages.scrollHeight}
+async function start(){let r=await fetch('/api/customers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.value,phone:phone.value})});customer=await r.json();draw(await (await fetch('/api/customers/'+customer.id+'/messages')).json())}
+async function send(){if(!customer)return alert("အရင် Chat စတင်ပါ");let v=text.value.trim();if(!v)return;await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:customer.id,orderId:order.value||null,message:v,sender:'customer'})});text.value=''}
+socket.on('chat:new',m=>{if(customer&&m.customer_id===customer.id){fetch('/api/customers/'+customer.id+'/messages').then(r=>r.json()).then(draw)}})
+</script></body></html>'''
 
-/* OWNER / ADMIN DEMO CONTROL */
-const DEMO_OWNER_USER="owner";
-const DEMO_OWNER_PASS="AKK2026!";
-let adminOrders=JSON.parse(localStorage.getItem("akkAdminOrders")||"[]");
+admin = r'''<!doctype html>
+<html lang="my"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Akk Shopping — Owner Dashboard</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+body{font-family:system-ui,sans-serif;background:#f4f6f8;margin:0;color:#20242a}.top{background:#111;color:#fff;padding:16px 24px;display:flex;justify-content:space-between}.badge{background:#d7263d;padding:4px 9px;border-radius:20px}.layout{display:grid;grid-template-columns:330px 1fr;max-width:1200px;margin:auto;height:calc(100vh - 65px)}.list{background:#fff;border-right:1px solid #ddd;overflow:auto}.person{padding:16px;border-bottom:1px solid #eee;cursor:pointer}.person.active{background:#f0f2f5}.unread{float:right;background:#d7263d;color:white;border-radius:20px;padding:2px 7px;font-size:12px}.chat{padding:22px;display:flex;flex-direction:column}.msgs{flex:1;overflow:auto;background:#fafafa;border-radius:14px;padding:15px}.m{max-width:70%;padding:11px 14px;border-radius:14px;margin:8px 0}.customer{background:#e7ebf0}.owner{background:#111;color:#fff;margin-left:auto}.send{display:flex;gap:10px;margin-top:12px}.send input{flex:1;padding:13px;border:1px solid #ddd;border-radius:10px}.send button{padding:0 20px;background:#111;color:#fff;border:0;border-radius:10px;font-weight:700}
+@media(max-width:700px){.layout{grid-template-columns:1fr}.list{height:220px}.chat{height:calc(100vh - 285px)}}
+</style></head><body>
+<div class="top"><b>👑 Akk Shopping Owner Dashboard</b><span>Unread: <b class="badge" id="unread">0</b></span></div>
+<div class="layout"><div class="list" id="people"></div><div class="chat"><h2 id="title">Customer Service</h2><div class="msgs" id="msgs">Customer တစ်ယောက်ရွေးပါ။</div><div class="send"><input id="reply" placeholder="Owner reply..." onkeydown="if(event.key==='Enter')sendReply()"><button onclick="sendReply()">Reply</button></div></div></div>
+<script>
+const socket=io();let selected=null;
+async function load(){let r=await fetch('/api/customers');let a=await r.json();people.innerHTML=a.map(c=>`<div class="person ${selected==c.id?'active':''}" onclick="select(${c.id})"><b>${c.name}</b><span class="unread">${c.unread||0}</span><br><small>${c.phone||''}</small><br><small>${c.last_message||''}</small></div>`).join("");let u=await (await fetch('/api/unread')).json();unread.textContent=u.count}
+async function select(id){selected=id;await fetch('/api/customers/'+id+'/read',{method:'POST'});let c=(await (await fetch('/api/customers')).json()).find(x=>x.id==id);title.textContent='💬 '+c.name+(c.phone?' — '+c.phone:'');draw(await (await fetch('/api/customers/'+id+'/messages')).json());load()}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function draw(a){msgs.innerHTML=a.map(m=>`<div class="m ${m.sender}">${esc(m.message)}<br><small>${m.created_at}</small></div>`).join("");msgs.scrollTop=msgs.scrollHeight}
+async function sendReply(){if(!selected)return;let v=reply.value.trim();if(!v)return;await fetch('/api/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:selected,message:v,sender:'owner'})});reply.value=''}
+socket.on('owner:unread',x=>unread.textContent=x.count);
+socket.on('chat:new',m=>{if(selected&&m.customer_id==selected){fetch('/api/customers/'+selected+'/messages').then(r=>r.json()).then(draw)}load()});
+socket.on('owner:notification',x=>{if(Notification.permission==='granted')new Notification('Akk Shopping — New Message',{body:x.message})});
+if('Notification'in window)Notification.requestPermission();load();setInterval(load,5000);
+</script></body></html>'''
 
-function openOwnerLogin(){
-  document.getElementById("ownerLogin").classList.add("open");
-  document.getElementById("ownerUser").focus();
-}
-function ownerLogin(){
-  const u=document.getElementById("ownerUser").value.trim();
-  const p=document.getElementById("ownerPass").value;
-  if(u===DEMO_OWNER_USER && p===DEMO_OWNER_PASS){
-    document.getElementById("ownerLogin").classList.remove("open");
-    document.getElementById("adminPanel").classList.add("open");
-    renderAdmin();
-    toast("Owner Login အောင်မြင်ပါသည် 👑");
-  }else toast("Username သို့မဟုတ် Password မှားနေပါသည်။");
-}
-function closeAdmin(){document.getElementById("adminPanel").classList.remove("open")}
-function ownerLogout(){closeAdmin();document.getElementById("ownerUser").value="";document.getElementById("ownerPass").value="";toast("Logout လုပ်ပြီးပါပြီ")}
-function adminView(view){
-  document.querySelectorAll(".admin-section").forEach(x=>x.classList.remove("active"));
-  document.getElementById("admin-"+view).classList.add("active");
-  document.querySelectorAll(".admin-side button").forEach(x=>x.classList.toggle("active",x.dataset.view===view));
-  renderAdmin();
-}
-function getAdminOrders(){
-  const saved=JSON.parse(localStorage.getItem("akkOrder")||"null");
-  const base=JSON.parse(localStorage.getItem("akkAdminOrders")||"[]");
-  if(saved && !base.some(x=>x.id===saved.id)){
-    base.push({...saved,name:"Customer",phone:"—",amount:0,method:"Payment",status:saved.status||"Pending Verification"});
-    localStorage.setItem("akkAdminOrders",JSON.stringify(base));
-  }
-  return base;
-}
-function renderAdmin(){
-  adminOrders=getAdminOrders();
-  const pending=adminOrders.filter(x=>(x.status||"").includes("Pending")||(x.status||"").includes("စစ်ဆေး")).length;
-  document.getElementById("statOrders").textContent=adminOrders.length;
-  document.getElementById("statPending").textContent=pending;
-  document.getElementById("statCustomers").textContent=new Set(adminOrders.map(x=>x.phone||x.name)).size;
-  document.getElementById("statSales").textContent=money(adminOrders.filter(x=>x.status==="Verified"||x.status==="Payment Verified").reduce((s,x)=>s+(x.amount||0),0));
-  const payHtml=adminOrders.length?adminOrders.slice().reverse().slice(0,5).map(adminPaymentCard).join(""):'<div class="empty-admin">Payment မရှိသေးပါ။</div>';
-  document.getElementById("dashPayments").innerHTML=payHtml;
-  document.getElementById("dashOrders").innerHTML=adminOrders.length?adminOrders.slice().reverse().slice(0,5).map(adminOrderCard).join(""):'<div class="empty-admin">Order မရှိသေးပါ။</div>';
-  document.getElementById("paymentList").innerHTML=adminOrders.length?adminOrders.slice().reverse().map(adminPaymentCard).join(""):'<div class="empty-admin">Payment မရှိသေးပါ။</div>';
-  document.getElementById("orderList").innerHTML=adminOrders.length?adminOrders.slice().reverse().map(adminOrderCard).join(""):'<div class="empty-admin">Order မရှိသေးပါ။</div>';
-  document.getElementById("adminProducts").innerHTML=P.map(x=>`<div class="payment-item"><div><b>${x.e} ${x.n}</b><div class="payment-meta">Category: ${x.c}　Price: ${money(x.p)}</div></div><span class="status ok">IN STORE</span></div>`).join("");
-  document.getElementById("customerList").innerHTML=adminOrders.length?adminOrders.map(x=>`<div class="payment-item"><div><b>${x.name||"Customer"}</b><div class="payment-meta">Phone: ${x.phone||"—"}　Order: ${x.id}</div></div><span class="status">${x.status||"Pending"}</span></div>`).join(""):'<div class="empty-admin">Customer မရှိသေးပါ။</div>';
-}
-function adminPaymentCard(x){
-  const st=x.status||"Pending Verification";
-  const cls=st==="Verified"||st==="Payment Verified"?"ok":st==="Rejected"?"reject":"";
-  return `<div class="payment-item"><div><b>💰 ${x.id}</b><div class="payment-meta">Customer: ${x.name||"Customer"}<br>Amount: ${money(x.amount||0)}<br>Method: ${x.method||"Payment"}<br>Time: ${x.time||"—"}</div><div class="receipt-preview">📎 Receipt: ${x.receiptName||"Customer uploaded receipt — demo browser record"}</div></div><div><span class="status ${cls}">${st}</span><div style="margin-top:8px">${st!=="Verified"&&st!=="Payment Verified"?`<button class="admin-btn verify" onclick="verifyOrder('${x.id}')">✓ Verify</button> <button class="admin-btn reject" onclick="rejectOrder('${x.id}')">✕ Reject</button>`:""}</div></div></div>`;
-}
-function adminOrderCard(x){
-  const status=x.status||"Pending Verification";
-  const options=["Pending Verification","Payment Verified","Processing","Shipped","Delivered","Completed"];
-  return `<div class="order-item"><b>📦 ${x.id}</b><div class="payment-meta">Customer: ${x.name||"Customer"}<br>Amount: ${money(x.amount||0)}<br>Current: <span class="status">${status}</span></div><select style="margin-top:8px;padding:7px;border:1px solid #ddd;border-radius:7px;font-size:10px" onchange="changeOrderStatus('${x.id}',this.value)">${options.map(o=>`<option ${o===status?"selected":""}>${o}</option>`).join("")}</select></div>`;
-}
-function verifyOrder(id){
-  adminOrders=getAdminOrders();
-  const x=adminOrders.find(o=>o.id===id); if(!x)return;
-  x.status="Payment Verified";
-  localStorage.setItem("akkAdminOrders",JSON.stringify(adminOrders));
-  localStorage.setItem("akkOrder",JSON.stringify({...x,status:"Payment Verified"}));
-  renderAdmin();toast(id+" Payment ကို အတည်ပြုပြီးပါပြီ ✓");
-}
-function rejectOrder(id){
-  adminOrders=getAdminOrders();
-  const x=adminOrders.find(o=>o.id===id); if(!x)return;
-  x.status="Rejected";
-  localStorage.setItem("akkAdminOrders",JSON.stringify(adminOrders));
-  localStorage.setItem("akkOrder",JSON.stringify({...x,status:"Rejected"}));
-  renderAdmin();toast(id+" Payment ကို Reject လုပ်ပြီးပါပြီ");
-}
-function changeOrderStatus(id,status){
-  adminOrders=getAdminOrders();
-  const x=adminOrders.find(o=>o.id===id); if(!x)return;
-  x.status=status;
-  localStorage.setItem("akkAdminOrders",JSON.stringify(adminOrders));
-  localStorage.setItem("akkOrder",JSON.stringify({...x,status}));
-  renderAdmin();toast(id+" → "+status);
-}
+readme = r'''# Akk Shopping — Realtime Customer Service v1
 
-/* Make checkout submission visible to owner demo */
-const originalSubmitOrder=submitOrder;
-submitOrder=function(){
-  const name=document.getElementById("name").value.trim();
-  const phone=document.getElementById("phone").value.trim();
-  const address=document.getElementById("address").value.trim();
-  const file=document.getElementById("receipt").files[0];
-  if(!name||!phone||!address||!file){toast("အမည်၊ ဖုန်း၊ လိပ်စာနှင့် Receipt အားလုံးဖြည့်ပေးပါ။");return}
-  const id="AKK-"+Math.floor(100000+Math.random()*900000);
-  const amount=C.reduce((s,x)=>s+P.find(p=>p.id===x.id).p*x.q,0);
-  const selected=document.querySelector(".pay.sel b");
-  const method=selected?selected.textContent.replace(/^[^A-Za-zက-အ]+/,"").trim():"Payment";
-  const order={id,name,phone,address,amount,method,receiptName:file.name,time:new Date().toLocaleString(),status:"Pending Verification"};
-  adminOrders=getAdminOrders();adminOrders.push(order);
-  localStorage.setItem("akkAdminOrders",JSON.stringify(adminOrders));
-  localStorage.setItem("akkOrder",JSON.stringify(order));
-  C=[];save();closeModal();toast("အမှာစာ "+id+" တင်ပြီးပါပြီ။ Owner Dashboard မှာ စစ်ဆေးနိုင်ပါပြီ 🔔");
-}
+ဒီ project က Akk Shopping အတွက်
+Customer → Server → Database → Owner Dashboard
+architecture ရဲ့ အလုပ်လုပ်နိုင်တဲ့ starter ဖြစ်ပါတယ်။
 
+## ပါဝင်ပြီးသား
+- Express backend
+- SQLite database
+- Socket.IO real-time messaging
+- Customer profile
+- Customer order ID ကို chat message နဲ့ ချိတ်နိုင်ခြင်း
+- Owner dashboard
+- Unread count
+- New message browser notification
+- Message persistence in database
 
-/* LIVE CHAT DEMO — browser localStorage based */
-let chats=JSON.parse(localStorage.getItem("akkChats")||"[]");
-let activeChat=localStorage.getItem("akkActiveChat")||"customer-1";
+## Run
+1. Node.js 18+ install လုပ်ပါ။
+2. ဒီ folder ထဲမှာ terminal ဖွင့်ပါ။
+3. `npm install`
+4. `npm start`
+5. Customer: http://localhost:3000/customer.html
+6. Owner: http://localhost:3000/admin.html
 
-function saveChats(){localStorage.setItem("akkChats",JSON.stringify(chats))}
-function timeNow(){return new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}
-function ensureChat(){
-  if(!chats.length){
-    chats=[{id:"customer-1",name:"Website Customer",messages:[{from:"agent",text:"မင်္ဂလာပါ 👋 Akk Shopping Customer Service မှ ကြိုဆိုပါတယ်။ ဘာကူညီပေးရမလဲ?",time:timeNow()}]}];
-    saveChats();
-  }
-}
-function toggleChat(){ensureChat();document.getElementById("chatBox").classList.toggle("open");renderCustomerChat()}
-function renderCustomerChat(){
-  ensureChat();const c=chats.find(x=>x.id==="customer-1")||chats[0];
-  const box=document.getElementById("customerMessages");
-  box.innerHTML=c.messages.map(m=>`<div class="msg ${m.from==="customer"?"customer":""}"><div class="bubble">${escapeHtml(m.text)}<small>${m.time}</small></div></div>`).join("");
-  box.scrollTop=box.scrollHeight;
-  const unread=chats.reduce((s,c)=>s+c.messages.filter(m=>m.from==="customer"&&!m.read).length,0);
-  document.getElementById("chatCount").textContent=unread;
-}
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
-function sendChat(){
-  const input=document.getElementById("chatInput"), text=input.value.trim();if(!text)return;
-  ensureChat();const c=chats.find(x=>x.id==="customer-1")||chats[0];
-  c.messages.push({from:"customer",text,time:timeNow(),read:false});saveChats();input.value="";renderCustomerChat();renderAdminChat();
-  setTimeout(()=>{c.messages.push({from:"agent",text:"ကျေးဇူးတင်ပါတယ်။ Customer Service မှ စစ်ဆေးပြီး အမြန်ဆုံးပြန်လည်ဖြေကြားပေးပါမယ်။ 🙏",time:timeNow()});saveChats();renderCustomerChat();renderAdminChat()},700);
-}
-function quickChat(t){document.getElementById("chatInput").value=t;sendChat()}
+## Production မတင်ခင် မဖြစ်မနေ
+- Owner secure login/session
+- HTTPS
+- PostgreSQL migration
+- Receipt/file storage
+- Orders API + payment verification
+- Role-based access control
+- Rate limiting / validation
+- Telegram/email notification
+- Backup & monitoring
 
-function renderAdminChat(){
-  ensureChat();
-  const list=document.getElementById("adminChatUsers");if(!list)return;
-  list.innerHTML=chats.map(c=>{
-    const last=c.messages[c.messages.length-1]||{};
-    const unread=c.messages.filter(m=>m.from==="customer"&&!m.read).length;
-    return `<div class="chat-user ${c.id===activeChat?"sel":""}" onclick="selectAdminChat('${c.id}')"><b>💬 ${escapeHtml(c.name)}</b><small>${escapeHtml((last.text||"").slice(0,35))}${unread?" • 🔔 "+unread:""}</small></div>`;
-  }).join("");
-  const c=chats.find(x=>x.id===activeChat)||chats[0];if(!c)return;
-  c.messages.forEach(m=>{if(m.from==="customer")m.read=true});saveChats();
-  document.getElementById("adminChatTitle").textContent="💬 "+c.name;
-  document.getElementById("adminChatMessages").innerHTML=c.messages.map(m=>`<div class="msg ${m.from==="customer"?"":"customer"}"><div class="bubble">${escapeHtml(m.text)}<small>${m.from==="customer"?"Customer":"Akk Shopping"} • ${m.time}</small></div></div>`).join("");
-  const mb=document.getElementById("adminChatMessages");mb.scrollTop=mb.scrollHeight;
-}
-function selectAdminChat(id){activeChat=id;localStorage.setItem("akkActiveChat",id);renderAdminChat()}
-function adminSendChat(){
-  const input=document.getElementById("adminChatInput"),text=input.value.trim();if(!text)return;
-  ensureChat();const c=chats.find(x=>x.id===activeChat);if(!c)return;
-  c.messages.push({from:"agent",text,time:timeNow()});saveChats();input.value="";renderAdminChat();
-}
-const oldRenderAdmin=renderAdmin;
-renderAdmin=function(){oldRenderAdmin();renderAdminChat()};
-ensureChat();
+လက်ရှိ version မှာ payment auto-detection မပါပါ။ KPay/Wave Pay ကို official API ရရှိပြီး တရားဝင် integration လုပ်နိုင်မှ automated payment confirmation ထည့်သင့်ပါတယ်။
+'''
 
-</script>
-</body>
-</html>
+for name, data in {
+    "server.js":server, "package.json":package,
+    "public/customer.html":customer, "public/admin.html":admin,
+    "README.md":readme
+}.items():
+    p=os.path.join(root,name); os.makedirs(os.path.dirname(p),exist_ok=True)
+    open(p,"w",encoding="utf-8").write(data)
+
+zip_path="/mnt/data/akk-shopping-realtime-v1.zip"
+with zipfile.ZipFile(zip_path,"w",zipfile.ZIP_DEFLATED) as z:
+    for dp,_,fs in os.walk(root):
+        for f in fs:
+            fp=os.path.join(dp,f)
+            z.write(fp,os.path.relpath(fp,root))
+
+print(zip_path)
