@@ -1,218 +1,117 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="my">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Premium modern shopping store">
-<title>AKKL Market — Everything You Need</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Akk Shopping</title>
 <style>
-:root{
-  --bg:#f6f7fb;--surface:#fff;--surface2:#f0f2f7;--text:#171923;--muted:#707585;
-  --primary:#5b4cf6;--primary2:#7c6cff;--accent:#ff6b4a;--success:#16a36a;--border:#e6e8ef;
-  --shadow:0 18px 50px rgba(24,25,45,.09);--radius:22px;
-}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
-button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.container{width:min(1180px,92%);margin:auto}
-.header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(18px);border-bottom:1px solid var(--border)}
-.nav{height:74px;display:flex;align-items:center;gap:22px}.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:21px;white-space:nowrap}
-.logo-mark{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--primary),#a38cff);display:grid;place-items:center;color:#fff;box-shadow:0 10px 24px rgba(91,76,246,.3)}
-.search{flex:1;position:relative}.search input{width:100%;height:46px;border:1px solid var(--border);background:var(--surface2);border-radius:14px;padding:0 18px 0 45px;outline:0}.search span{position:absolute;left:16px;top:12px}
-.nav-actions{display:flex;gap:9px}.icon-btn{width:43px;height:43px;border-radius:13px;background:var(--surface2);position:relative}.badge{position:absolute;right:-4px;top:-4px;background:var(--accent);color:white;border-radius:99px;font-size:10px;padding:3px 6px}
-.hero{padding:44px 0 22px}.hero-box{min-height:410px;border-radius:32px;overflow:hidden;position:relative;background:radial-gradient(circle at 82% 25%,rgba(255,255,255,.35),transparent 20%),linear-gradient(125deg,#1b173f,#5b4cf6 52%,#9a79ff);color:#fff;padding:58px 7%;display:flex;align-items:center}
-.hero-box:after{content:"";position:absolute;width:430px;height:430px;border-radius:50%;right:-90px;bottom:-170px;background:rgba(255,255,255,.12)}
-.hero-content{max-width:620px;position:relative;z-index:2}.eyebrow{font-weight:800;letter-spacing:.13em;text-transform:uppercase;font-size:12px;opacity:.8}.hero h1{font-size:clamp(38px,6vw,67px);line-height:.98;margin:15px 0}.hero p{font-size:17px;line-height:1.7;opacity:.88;max-width:540px}.btn{padding:13px 19px;border-radius:13px;font-weight:800;transition:.2s}.btn:hover{transform:translateY(-2px)}.btn-primary{background:#fff;color:#3526c7}.btn-dark{background:#191a24;color:#fff}.btn-outline{background:transparent;border:1px solid var(--border)}
-.hero-buttons{display:flex;gap:12px;margin-top:24px;flex-wrap:wrap}.floating-card{position:absolute;right:9%;top:70px;background:rgba(255,255,255,.14);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);padding:18px;border-radius:20px;width:190px;z-index:2}.floating-card strong{display:block;font-size:28px}.floating-card small{opacity:.8}
-.section{padding:35px 0}.section-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:18px}.section h2{margin:0;font-size:28px}.section-sub{color:var(--muted);margin:7px 0 0}.link{color:var(--primary);font-weight:800;background:none}
-.categories{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}.cat{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px 10px;text-align:center;transition:.22s}.cat:hover{transform:translateY(-5px);box-shadow:var(--shadow)}.cat-icon{font-size:30px;display:block;margin-bottom:9px}.cat b{font-size:13px}
-.deal{background:#171824;color:#fff;border-radius:28px;padding:27px}.deal-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}.timer{background:#2b2d3b;padding:10px 14px;border-radius:12px;font-weight:800;color:#ffd4ca}
-.products{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.product{background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;position:relative;transition:.22s}.product:hover{transform:translateY(-5px);box-shadow:var(--shadow)}.product-img{height:205px;background:var(--surface2);display:grid;place-items:center;font-size:74px;position:relative}.heart{position:absolute;right:12px;top:12px;width:38px;height:38px;border-radius:50%;background:#fff;box-shadow:0 7px 20px #00000012}.heart.active{color:#ef476f}.sale{position:absolute;left:12px;top:12px;background:var(--accent);color:#fff;padding:5px 9px;border-radius:8px;font-size:11px;font-weight:900}.product-body{padding:15px}.product-name{font-weight:800;margin-bottom:6px}.rating{font-size:12px;color:#f2a900}.price{margin-top:10px;font-weight:900;font-size:19px}.old{text-decoration:line-through;color:#9a9dab;font-weight:500;font-size:13px;margin-left:6px}.add{width:100%;margin-top:13px;background:#f0efff;color:#4333db;padding:11px;border-radius:11px;font-weight:900}
-.banner{border-radius:26px;background:linear-gradient(110deg,#fff1e9,#ffe2d3);padding:34px 7%;display:flex;justify-content:space-between;align-items:center;overflow:hidden}.banner h2{font-size:31px;margin:0 0 8px}.banner p{color:#755f58}.banner-art{font-size:100px}
-.trust{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.trust-card{background:var(--surface);border:1px solid var(--border);padding:22px;border-radius:18px}.trust-card span{font-size:28px}.trust-card h3{margin:12px 0 6px}.trust-card p{color:var(--muted);font-size:13px;line-height:1.6}
-.payment{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:25px}.pay-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:18px}.pay{padding:18px;border-radius:15px;background:var(--surface2);font-weight:800}.pay small{display:block;color:var(--muted);margin-top:6px;font-weight:500}
-.contact{background:#151621;color:#fff;border-radius:27px;padding:32px;display:flex;justify-content:space-between;gap:25px;align-items:center}.contact p{color:#bfc0ca}.contact-actions{display:flex;gap:10px;flex-wrap:wrap}.contact .btn-primary{background:#fff}
-footer{padding:42px 0 25px}.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:30px}.footer-grid h4{margin-top:0}.footer-grid a{display:block;color:var(--muted);text-decoration:none;margin:10px 0;font-size:14px}.copy{border-top:1px solid var(--border);margin-top:28px;padding-top:20px;color:var(--muted);font-size:13px}
-.modal{position:fixed;inset:0;background:#11121dcc;display:none;place-items:center;z-index:100;padding:20px}.modal.show{display:grid}.modal-box{width:min(700px,100%);max-height:92vh;overflow:auto;background:var(--surface);border-radius:25px;padding:25px;position:relative}.close{position:absolute;right:17px;top:17px;width:38px;height:38px;border-radius:50%;background:var(--surface2)}.modal-product{display:grid;grid-template-columns:1fr 1fr;gap:25px}.modal-image{min-height:320px;border-radius:20px;background:var(--surface2);display:grid;place-items:center;font-size:120px}.modal-box h2{font-size:30px;margin:5px 0}.modal-box label{display:block;font-weight:800;font-size:13px;margin-top:14px}.modal-box input,.modal-box select,.modal-box textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:11px;margin-top:6px;outline:0}.summary{background:var(--surface2);padding:15px;border-radius:14px;margin:14px 0}.cart-row{display:grid;grid-template-columns:60px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}.mini-img{width:55px;height:55px;border-radius:12px;background:var(--surface2);display:grid;place-items:center;font-size:28px}.qty{display:flex;gap:7px;align-items:center}.qty button{width:28px;height:28px;border-radius:8px;background:var(--surface2)}.empty{text-align:center;padding:35px;color:var(--muted)}
-.toast{position:fixed;right:22px;bottom:22px;background:#171824;color:#fff;padding:14px 18px;border-radius:13px;z-index:200;box-shadow:var(--shadow);transform:translateY(30px);opacity:0;pointer-events:none;transition:.25s}.toast.show{transform:none;opacity:1}
-.mobile-menu{display:none}
-@media(max-width:900px){.categories{grid-template-columns:repeat(3,1fr)}.products{grid-template-columns:repeat(2,1fr)}.trust{grid-template-columns:repeat(2,1fr)}.footer-grid{grid-template-columns:1.5fr 1fr 1fr}.floating-card{display:none}}
-@media(max-width:650px){.nav{height:64px}.search{order:3;flex-basis:100%}.nav{flex-wrap:wrap;height:auto;padding:10px 0}.nav-actions{margin-left:auto}.header{position:relative}.hero{padding-top:18px}.hero-box{min-height:480px;padding:35px 7%;align-items:end}.hero h1{font-size:44px}.categories{grid-template-columns:repeat(3,1fr);gap:8px}.cat{padding:14px 5px}.cat-icon{font-size:25px}.products{gap:10px}.product-img{height:155px;font-size:55px}.banner{padding:25px}.banner-art{font-size:65px}.trust,.pay-grid,.footer-grid{grid-template-columns:1fr}.contact{display:block}.contact-actions{margin-top:20px}.modal-product{grid-template-columns:1fr}.modal-image{min-height:230px}.section{padding:27px 0}}
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Myanmar:wght@400;500;600;700;800&display=swap');
+:root{--r:#c8102e;--g:#d5a52a;--d:#101b2b;--bg:#f7f8fa;--line:#e7e9ed}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:#202631;font-family:"Noto Sans Myanmar",system-ui,sans-serif}button,input,textarea{font:inherit}button{cursor:pointer}.wrap{width:min(1180px,calc(100% - 28px));margin:auto}
+.top{background:var(--d);color:white;font-size:12px}.top .wrap{height:40px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.head{background:white;position:sticky;top:0;z-index:20;box-shadow:0 2px 12px #0000000d}.headrow{min-height:86px;display:flex;align-items:center;gap:22px}
+.logo{display:flex;align-items:center;gap:10px;min-width:230px}.logo i{width:48px;height:48px;border-radius:12px;background:linear-gradient(145deg,#f2c34c,#bd8500);display:grid;place-items:center;font-style:normal;font-size:25px}.logo b{font-size:23px;color:var(--r);display:block}.logo small{font-size:9px;color:#777}
+.search{display:flex;flex:1;height:47px}.search input{flex:1;border:1px solid #ddd;border-right:0;border-radius:10px 0 0 10px;padding:0 16px;background:#fafafa;outline:0}.search button{width:58px;border:0;background:var(--r);color:#fff;border-radius:0 10px 10px 0;font-size:20px}
+.actions{display:flex;gap:15px}.act{border:0;background:transparent;color:#666;position:relative}.act strong{display:block;font-size:21px}.act small{font-size:10px}.badge{position:absolute;right:-5px;top:-4px;background:var(--r);color:#fff;border-radius:20px;font-size:9px;min-width:17px;height:17px;display:grid;place-items:center}
+.nav{background:var(--r);color:white}.nav .wrap{display:flex;overflow:auto}.nav a{color:#fff;text-decoration:none;padding:13px 15px;white-space:nowrap;font-size:13px;font-weight:700}.nav a:hover,.nav a:first-child{color:#ffd55f}
+.hero{height:455px;position:relative;overflow:hidden;background:#33271f}.slide{position:absolute;inset:0;background:center/cover no-repeat;opacity:0;transition:.7s}.slide.on{opacity:1}.slide:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#000b,#0005,#0001)}.hero .wrap{position:relative;z-index:2;height:100%;display:flex;align-items:center}.heroText{color:white;max-width:590px;padding-bottom:25px}.heroText em{color:#ffd55f;font-size:27px}.heroText h1{font-size:43px;line-height:1.35;margin:7px 0 12px}.heroText p{font-size:15px;line-height:1.9;color:#eee}.btn{border:0;border-radius:9px;padding:12px 20px;font-weight:800}.red{background:var(--r);color:white}.white{background:white;color:var(--d);margin-left:8px}.arrow{position:absolute;z-index:3;top:50%;transform:translateY(-50%);width:42px;height:42px;border:0;border-radius:50%;background:#0007;color:#fff;font-size:27px}.left{left:20px}.right{right:20px}.dots{position:absolute;z-index:3;bottom:28px;left:50%;transform:translateX(-50%);display:flex;gap:7px}.dot{width:9px;height:9px;border:0;border-radius:50%;padding:0;background:white}.dot.on{background:var(--r)}
+.trust{margin-top:-38px;position:relative;z-index:5}.trustbox{background:white;border-radius:17px;box-shadow:0 12px 30px #101b2b14;display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden}.trustitem{padding:18px;display:flex;gap:10px;align-items:center;border-right:1px solid var(--line)}.trustitem:last-child{border:0}.trusticon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#fff0f2;color:var(--r);font-size:19px}.trustitem b{font-size:12px;display:block}.trustitem small{font-size:10px;color:#777}
+section{padding:45px 0 0}.secthead{display:flex;justify-content:space-between;align-items:end;margin-bottom:18px}.secthead h2{font-size:24px;margin:0}.secthead h2:after{content:"";display:block;width:48px;height:3px;background:var(--r);margin-top:8px}.all{color:var(--r);font-weight:800;font-size:12px}
+.cats{display:grid;grid-template-columns:repeat(8,1fr);gap:12px}.cat{background:white;border:1px solid var(--line);border-radius:13px;padding:12px 6px;text-align:center;cursor:pointer;transition:.2s}.cat:hover{transform:translateY(-3px);box-shadow:0 10px 25px #0000000d}.cat div{font-size:35px;height:58px}.cat span{font-size:11px;font-weight:700}
+.products{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}.product{background:white;border:1px solid var(--line);border-radius:14px;overflow:hidden;transition:.2s}.product:hover{transform:translateY(-3px);box-shadow:0 12px 28px #00000010}.pic{height:190px;background:#f4f5f6;display:grid;place-items:center;font-size:72px;position:relative}.off{position:absolute;left:9px;top:9px;background:var(--r);color:white;border-radius:5px;padding:4px 7px;font-size:10px;font-weight:800}.heart{position:absolute;right:9px;top:9px;border:0;background:white;border-radius:50%;width:32px;height:32px}.heart.on{color:var(--r)}.body{padding:12px}.name{font-size:13px;font-weight:800;min-height:40px}.stars{color:#f0aa00;font-size:12px;margin:7px 0}.price{color:var(--r);font-size:16px;font-weight:800}.old{color:#999;text-decoration:line-through;font-size:10px;margin-left:5px;font-weight:400}.add{width:100%;margin-top:10px;border:1px solid var(--r);background:white;color:var(--r);border-radius:7px;padding:8px;font-weight:800;font-size:11px}.add:hover{background:var(--r);color:white}
+.deal{background:white;border:1px solid var(--line);border-radius:16px;padding:17px}.timer{background:var(--r);color:white;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:800}
+.dest{margin-top:45px;padding:48px 0;color:white;background:linear-gradient(#101b2bcc,#101b2bdd),url('https://images.unsplash.com/photo-1540611025311-01df3cef54b5?auto=format&fit=crop&w=1800&q=85') center/cover}.destgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}.place{height:145px;border-radius:14px;overflow:hidden;position:relative}.place img{width:100%;height:100%;object-fit:cover}.place:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent,#000b)}.place span{position:absolute;z-index:2;bottom:9px;left:10px;font-size:12px;font-weight:800}
+footer{background:var(--d);color:white;padding:38px 0 18px;margin-top:0}.footgrid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:30px}.footgrid h3{margin:0 0 12px}.footgrid p,.footgrid li{font-size:12px;color:#cbd1da;line-height:1.8}.footgrid ul{list-style:none;padding:0;margin:0}.bottom{border-top:1px solid #ffffff1a;margin-top:25px;padding-top:14px;color:#9ca7b5;font-size:11px;display:flex;justify-content:space-between}
+.cart{position:fixed;right:16px;bottom:16px;width:355px;max-width:calc(100% - 22px);background:white;border-radius:16px;box-shadow:0 20px 60px #0004;z-index:40;display:none}.cart.open{display:block}.carthead{padding:15px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-weight:800}.x{border:0;background:#f1f2f4;border-radius:50%;width:30px;height:30px}.cartbody{max-height:330px;overflow:auto;padding:5px 14px}.row{display:flex;gap:9px;padding:10px 0;border-bottom:1px solid var(--line)}.thumb{width:46px;height:46px;background:#f3f4f5;border-radius:8px;display:grid;place-items:center;font-size:23px}.info{flex:1}.info b{display:block;font-size:11px}.info small{color:#777;font-size:10px}.qty{display:flex;gap:6px;align-items:center;margin-top:4px}.qty button{width:23px;height:23px;border:1px solid #ddd;background:white;border-radius:5px}.cartfoot{padding:14px;border-top:1px solid var(--line)}.total{display:flex;justify-content:space-between;font-weight:800;margin-bottom:10px}.checkout{width:100%;border:0;background:var(--r);color:white;border-radius:8px;padding:11px;font-weight:800}
+.overlay{position:fixed;inset:0;background:#0008;z-index:60;display:none;align-items:center;justify-content:center;padding:15px}.overlay.open{display:flex}.modal{width:min(690px,100%);max-height:92vh;overflow:auto;background:white;border-radius:16px}.mh{padding:15px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}.mb{padding:18px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin-bottom:11px}.field.full{grid-column:1/-1}.field label{font-size:11px;font-weight:800;display:block;margin-bottom:5px}.field input,.field textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;outline:0}.pay{border:1px solid #ddd;border-radius:9px;padding:10px;margin-bottom:8px;cursor:pointer}.pay.sel{border:2px solid var(--r);background:#fff8f9}.pay b{font-size:12px}.pay strong{display:block;color:var(--r)}.upload{border:2px dashed #d8dce2;border-radius:10px;padding:18px;text-align:center;color:#777;font-size:12px}
+.toast{position:fixed;z-index:100;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;background:var(--d);color:white;padding:10px 15px;border-radius:9px;font-size:12px;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:1000px){.cats{grid-template-columns:repeat(4,1fr)}.products{grid-template-columns:repeat(3,1fr)}.destgrid{grid-template-columns:repeat(3,1fr)}.footgrid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.top .wrap span:nth-child(2){display:none}.headrow{flex-wrap:wrap;padding:9px 0}.logo{min-width:auto}.search{order:3;flex-basis:100%}.hero{height:430px}.heroText h1{font-size:31px}.heroText em{font-size:21px}.trustbox{grid-template-columns:1fr 1fr}.trustitem{border-bottom:1px solid var(--line)}.products{grid-template-columns:repeat(2,1fr)}.pic{height:150px}.destgrid{grid-template-columns:1fr 1fr}.fields{grid-template-columns:1fr}.field.full{grid-column:auto}}
+@media(max-width:480px){.cats{grid-template-columns:repeat(4,1fr);gap:7px}.cat div{font-size:28px;height:48px}.cat span{font-size:9px}.heroText h1{font-size:27px}.actions{gap:7px}.act small{display:none}.footgrid{grid-template-columns:1fr}.bottom{flex-direction:column;gap:7px}}
 </style>
 </head>
 <body>
+<div class="top"><div class="wrap"><span>👋 Akk Shopping မှ ကြိုဆိုပါတယ်</span><span>🚚 တစ်နိုင်ငံလုံး ပို့ဆောင်ပေးပါသည်</span><span>📞 09-793306685　✉️ yuetingdiana@gmail.com</span></div></div>
+<header class="head"><div class="wrap headrow">
+<a class="logo" href="#"><i>🛍️</i><div><b>Akk Shopping</b><small>အရည်အသွေးကောင်း • စျေးနှုန်းသင့် • ယုံကြည်စိတ်ချရ</small></div></a>
+<div class="search"><input id="search" placeholder="ကုန်ပစ္စည်းများ ရှာရန်..." oninput="search(this.value)"><button onclick="search(document.getElementById('search').value)">🔍</button></div>
+<div class="actions"><button class="act" onclick="toast('Wishlist')"><strong>♡</strong><small>စိတ်ကြိုက်</small><i class="badge" id="wish">0</i></button><button class="act" onclick="cartToggle()"><strong>🛒</strong><small>စျေးဝယ်တောင်း</small><i class="badge" id="cc">0</i></button><button class="act" onclick="checkout()"><strong>👤</strong><small>အကောင့်</small></button></div>
+</div></header>
+<nav class="nav"><div class="wrap"><a href="#home">☰ အမျိုးအစားများ</a><a href="#deals">ပရိုမိုးရှင်း</a><a href="#products">ကုန်ပစ္စည်းများ</a><a href="#new">အသစ်ရောက်</a><a href="#destinations">မြန်မာ့အလှ</a><a href="#contact">ဆက်သွယ်ရန်</a></div></nav>
 
-<header class="header">
-  <div class="container nav">
-    <div class="logo"><div class="logo-mark">A</div> AKKL Market</div>
-    <div class="search"><span>🔎</span><input id="searchInput" placeholder="Search products, food, essentials..." /></div>
-    <div class="nav-actions">
-      <button class="icon-btn" onclick="openWishlist()">♡<span class="badge" id="wishCount">0</span></button>
-      <button class="icon-btn" onclick="openCart()">🛒<span class="badge" id="cartCount">0</span></button>
-    </div>
-  </div>
-</header>
-
-<main>
-<section class="hero">
-<div class="container">
-  <div class="hero-box">
-    <div class="hero-content">
-      <div class="eyebrow">Everyday shopping, made simple</div>
-      <h1>Everything you need. One beautiful place.</h1>
-      <p>Discover food, groceries, home essentials, personal care and more — selected for convenient everyday shopping.</p>
-      <div class="hero-buttons">
-        <button class="btn btn-primary" onclick="document.getElementById('productsSection').scrollIntoView()">Shop Now →</button>
-        <button class="btn" style="background:#ffffff22;color:#fff;border:1px solid #ffffff44" onclick="document.getElementById('categories').scrollIntoView()">Explore Categories</button>
-      </div>
-    </div>
-    <div class="floating-card"><small>Today's shopping</small><strong>Easy.</strong><span>Fast & convenient</span></div>
-  </div>
-</div>
+<section class="hero" id="home">
+<div class="slide on" style="background-image:url('https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=1800&q=85')"></div>
+<div class="slide" style="background-image:url('https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=1800&q=85')"></div>
+<div class="slide" style="background-image:url('https://images.unsplash.com/photo-1577083552431-6e5fd01988b5?auto=format&fit=crop&w=1800&q=85')"></div>
+<div class="wrap"><div class="heroText"><em>Akk Shopping</em><h1>မြန်မာ့အလှနဲ့<br>အကောင်းဆုံး ရွေးချယ်ခြင်း</h1><p>နေ့စဉ်လိုအပ်သမျှ ကုန်ပစ္စည်းကောင်းများကို တစ်နေရာတည်းမှာ လွယ်ကူစွာ စျေးဝယ်လိုက်ပါ။</p><button class="btn red" onclick="document.getElementById('products').scrollIntoView()">🛍️ အခုပဲ စျေးဝယ်မယ်</button><button class="btn white" onclick="document.getElementById('destinations').scrollIntoView()">▶ မြန်မာ့အလှကြည့်မယ်</button></div></div>
+<button class="arrow left" onclick="move(-1)">‹</button><button class="arrow right" onclick="move(1)">›</button><div class="dots" id="dots"></div>
 </section>
 
-<section class="section" id="categories">
-<div class="container">
-<div class="section-head"><div><h2>Shop by Category</h2><p class="section-sub">Find what you need in seconds.</p></div></div>
-<div class="categories" id="categoryGrid"></div>
-</div>
-</section>
+<div class="trust"><div class="wrap"><div class="trustbox"><div class="trustitem"><div class="trusticon">🚚</div><div><b>အမြန်ပို့ဆောင်ခြင်း</b><small>တစ်နိုင်ငံလုံး</small></div></div><div class="trustitem"><div class="trusticon">🛡️</div><div><b>လုံခြုံစိတ်ချရ</b><small>100% ယုံကြည်စိတ်ချ</small></div></div><div class="trustitem"><div class="trusticon">🎧</div><div><b>24/7 ဝန်ဆောင်မှု</b><small>အကူအညီပေးရန်</small></div></div><div class="trustitem"><div class="trusticon">↩️</div><div><b>ပြန်လဲနိုင်ခြင်း</b><small>စည်းကမ်းချက်များအရ</small></div></div></div></div></div>
 
-<section class="section">
-<div class="container">
-<div class="deal">
-<div class="deal-top"><div><h2 style="margin:0">🔥 Today's Deals</h2><small style="color:#aeb0bc">Limited-time offers</small></div><div class="timer">ENDS SOON</div></div>
-<div class="products" id="dealGrid"></div>
-</div>
-</div>
-</section>
+<section><div class="wrap"><div class="secthead"><h2>အမျိုးအစားများ</h2><span class="all">အားလုံးကြည့်ရန် →</span></div><div class="cats">
+<div class="cat" onclick="filterCat('အစားအသောက်')"><div>🥬</div><span>အစားအသောက်</span></div><div class="cat" onclick="filterCat('အချိုရည်')"><div>🥤</div><span>အချိုရည်</span></div><div class="cat" onclick="filterCat('မုန့်')"><div>🍪</div><span>မုန့် & Snacks</span></div><div class="cat" onclick="filterCat('ကိုယ်ရေး')"><div>🧴</div><span>ကိုယ်ရေးသုံး</span></div><div class="cat" onclick="filterCat('အိမ်သုံး')"><div>🏠</div><span>အိမ်သုံး</span></div><div class="cat" onclick="filterCat('မီးဖို')"><div>🍳</div><span>မီးဖိုချောင်</span></div><div class="cat" onclick="filterCat('ဖက်ရှင်')"><div>👕</div><span>ဖက်ရှင်</span></div><div class="cat" onclick="filterCat('အီလက်ထရောနစ်')"><div>📱</div><span>အီလက်ထရောနစ်</span></div>
+</div></div></section>
 
-<section class="section" id="productsSection">
-<div class="container">
-<div class="section-head"><div><h2>⭐ Featured Products</h2><p class="section-sub">Hand-picked everyday favorites.</p></div><button class="link" onclick="showAll()">View All →</button></div>
-<div class="products" id="productGrid"></div>
-</div>
-</section>
+<section id="deals"><div class="wrap"><div class="secthead"><h2>ယနေ့အထူးလျှော့စျေး</h2><span class="timer">⏱ 12 : 45 : 30</span></div><div class="deal"><div class="products" id="dealsGrid"></div></div></div></section>
+<section id="products"><div class="wrap"><div class="secthead"><h2>အထူးအကြံပြုကုန်ပစ္စည်းများ</h2><a class="all" href="#" onclick="reset();return false">အားလုံးကြည့်ရန် →</a></div><div class="products" id="grid"></div></div></section>
+<section id="new"><div class="wrap"><div class="secthead"><h2>အသစ်ရောက်ကုန်ပစ္စည်းများ</h2></div><div class="products" id="newGrid"></div></div></section>
 
-<section class="section">
-<div class="container">
-<div class="banner"><div><h2>🍎 Food & Groceries</h2><p>Daily essentials for your kitchen and home.</p><button class="btn btn-dark" onclick="filterCategory('Food')">Shop Food →</button></div><div class="banner-art">🛒</div></div>
-</div>
-</section>
+<section class="dest" id="destinations"><div class="wrap"><div class="secthead"><h2 style="color:white">မြန်မာနိုင်ငံ၏ အလှအပနေရာများ</h2><span style="color:#ffd55f;font-size:12px">Our Beautiful Myanmar</span></div><div class="destgrid">
+<div class="place"><img src="https://images.unsplash.com/photo-1590736969955-71cc94901144?auto=format&fit=crop&w=700&q=80"><span>ပုဂံ (Bagan)</span></div>
+<div class="place"><img src="https://images.unsplash.com/photo-1528181304800-259b08848526?auto=format&fit=crop&w=700&q=80"><span>အင်းလေး (Inle Lake)</span></div>
+<div class="place"><img src="https://images.unsplash.com/photo-1577083552431-6e5fd01988b5?auto=format&fit=crop&w=700&q=80"><span>ရန်ကုန် (Yangon)</span></div>
+<div class="place"><img src="https://images.unsplash.com/photo-1562602833-0f4ab2fc46e3?auto=format&fit=crop&w=700&q=80"><span>မန္တလေး (Mandalay)</span></div>
+<div class="place"><img src="https://images.unsplash.com/photo-1583417319070-4a69db38a482?auto=format&fit=crop&w=700&q=80"><span>ကျိုက်ထီးရိုး (Golden Rock)</span></div>
+<div class="place"><img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=80"><span>ငပလီ (Ngapali Beach)</span></div>
+</div></div></section>
 
-<section class="section">
-<div class="container">
-<div class="section-head"><div><h2>✨ New Arrivals</h2><p class="section-sub">Fresh products just added.</p></div></div>
-<div class="products" id="newGrid"></div>
-</div>
-</section>
+<aside class="cart" id="cart"><div class="carthead">🛒 စျေးဝယ်ခြင်းတောင်း <button class="x" onclick="cartToggle()">×</button></div><div class="cartbody" id="cartBody"></div><div class="cartfoot"><div class="total"><span>စုစုပေါင်း</span><span id="total">0 ကျပ်</span></div><button class="checkout" onclick="checkout()">ငွေပေးချေပြီး အမှာစာတင်မည်</button></div></aside>
 
-<section class="section">
-<div class="container">
-<div class="section-head"><div><h2>Why Shop With Us?</h2><p class="section-sub">Simple shopping, reliable service.</p></div></div>
-<div class="trust">
-<div class="trust-card"><span>🚚</span><h3>Convenient</h3><p>Browse everyday products from one easy-to-use store.</p></div>
-<div class="trust-card"><span>💎</span><h3>Great Value</h3><p>Clear pricing and carefully selected products.</p></div>
-<div class="trust-card"><span>🔒</span><h3>Payment Options</h3><p>Choose KPay, Wave Pay or Banking at checkout.</p></div>
-<div class="trust-card"><span>💬</span><h3>Customer Support</h3><p>Reach us by phone, email or Telegram when you need help.</p></div>
-</div>
-</div>
-</section>
+<div class="overlay" id="overlay"><div class="modal"><div class="mh"><b>🧾 အမှာစာတင်ရန်</b><button class="x" onclick="closeModal()">×</button></div><div class="mb"><div class="fields">
+<div class="field"><label>အမည်</label><input id="name" placeholder="သင့်အမည်"></div><div class="field"><label>ဖုန်းနံပါတ်</label><input id="phone" placeholder="09xxxxxxxxx"></div>
+<div class="field full"><label>ပို့ဆောင်ရမည့်လိပ်စာ</label><textarea id="address" rows="3" placeholder="အပြည့်အစုံရေးပါ"></textarea></div>
+<div class="field full"><label>ငွေပေးချေမှုနည်းလမ်း</label><div class="pay sel" onclick="pay(this)"><b>💙 KPay</b><strong>09-793306685</strong></div><div class="pay" onclick="pay(this)"><b>💛 Wave Pay</b><strong>09-793306685</strong></div><div class="pay" onclick="pay(this)"><b>🏦 Banking — BNY</b><strong>ဘဏ်မှတစ်ဆင့် ငွေလွှဲနိုင်ပါသည်</strong></div></div>
+<div class="field full"><label>ငွေလွှဲအထောက်အထား (Receipt) တင်ရန်</label><div class="upload">📎 ငွေလွှဲပြီးပါက Receipt / Screenshot တင်ပေးပါ။<br><input id="receipt" type="file" accept="image/*,.pdf"></div></div>
+</div><button class="checkout" onclick="submitOrder()">အမှာစာတင်ပြီး အတည်ပြုရန်</button></div></div></div>
 
-<section class="section">
-<div class="container">
-<div class="payment"><h2 style="margin:0">💳 Easy Payment</h2><p class="section-sub">Complete your payment, then upload your receipt for verification.</p>
-<div class="pay-grid">
-<div class="pay">🟢 KPay<strong>09-793306685</strong><small>Tap checkout to select this method.</small></div>
-<div class="pay">🔵 Wave Pay<strong>09-793306685</strong><small>Tap checkout to select this method.</small></div>
-<div class="pay">🏦 Banking<strong>BNY</strong><small>Bank transfer details are shown at checkout.</small></div>
-</div></div>
-</div>
-</section>
-
-<section class="section">
-<div class="container">
-<div class="contact"><div><h2 style="margin:0">Need help?</h2><p>We're here to help with products, orders and payment verification.</p></div>
-<div class="contact-actions"><a class="btn btn-primary" href="tel:09793306685">📞 09-793306685</a><a class="btn" style="background:#ffffff18;color:#fff" href="mailto:yuetingdiana@gmail.com">✉️ Email</a><a class="btn" style="background:#ffffff18;color:#fff" href="https://t.me/Akkl10" target="_blank">💬 Telegram</a></div></div>
-</div>
-</section>
-</main>
-
-<footer>
-<div class="container">
-<div class="footer-grid">
-<div><div class="logo"><div class="logo-mark">A</div> AKKL Market</div><p style="color:var(--muted);line-height:1.7">Everything you need, all in one place.</p></div>
-<div><h4>Shop</h4><a href="#productsSection">All Products</a><a href="#categories">Categories</a><a href="#productsSection">Deals</a></div>
-<div><h4>Customer</h4><a href="#" onclick="openCart();return false">My Cart</a><a href="#" onclick="openCheckout();return false">Checkout</a><a href="#categories">FAQ</a></div>
-<div><h4>Contact</h4><a href="tel:09793306685">09-793306685</a><a href="mailto:yuetingdiana@gmail.com">yuetingdiana@gmail.com</a><a href="https://t.me/Akkl10" target="_blank">@Akkl10</a></div>
-</div><div class="copy">© 2026 AKKL Market. All rights reserved.</div>
-</div>
-</footer>
-
-<div class="modal" id="modal"><div class="modal-box" id="modalContent"></div></div>
+<footer id="contact"><div class="wrap"><div class="footgrid"><div><h3>Akk Shopping</h3><p>မြန်မာ့အလှ၊ ယုံကြည်စိတ်ချရမှုနဲ့ ခေတ်မီစျေးဝယ်အတွေ့အကြုံကို တစ်နေရာတည်းမှာ ပေးစွမ်းပေးနေပါသည်။</p></div><div><h3>အကူအညီ</h3><ul><li>အမှာစာခြေရာခံရန်</li><li>ပြန်လဲ/ပြန်အမ်းမူဝါဒ</li><li>အမေးများသောမေးခွန်းများ</li></ul></div><div><h3>ဆက်သွယ်ရန်</h3><ul><li>📞 09-793306685</li><li>✉️ yuetingdiana@gmail.com</li><li>Telegram: @Akkl10</li></ul></div><div><h3>ငွေပေးချေမှု</h3><p>💙 KPay</p><p>💛 Wave Pay</p><p>🏦 BNY Banking</p><p>🔒 လုံခြုံစိတ်ချရသော ငွေပေးချေမှု</p></div></div><div class="bottom"><span>© 2026 Akk Shopping. All rights reserved.</span><span>Privacy • Terms • Customer Service</span></div></div></footer>
 <div class="toast" id="toast"></div>
 
 <script>
-const products=[
-{id:1,name:"Premium Coffee 500g",cat:"Food",price:21500,old:25000,emoji:"☕",rating:4.8,sale:14,deal:true,new:false,desc:"Rich, aromatic coffee for your everyday cup."},
-{id:2,name:"Fresh Apples 1kg",cat:"Food",price:8900,old:10500,emoji:"🍎",rating:4.7,sale:15,deal:true,new:false,desc:"Crisp and refreshing apples for everyday snacking."},
-{id:3,name:"Organic Rice 5kg",cat:"Food",price:28500,old:32000,emoji:"🍚",rating:4.9,sale:11,deal:true,new:false,desc:"Quality rice suitable for everyday family meals."},
-{id:4,name:"Sparkling Water 6 Pack",cat:"Drinks",price:7500,old:8500,emoji:"🥤",rating:4.6,sale:12,deal:true,new:false,desc:"Refreshing sparkling water for home and gatherings."},
-{id:5,name:"Gentle Body Wash",cat:"Personal Care",price:12900,old:null,emoji:"🧴",rating:4.8,sale:0,deal:false,new:true,desc:"A gentle everyday body wash with a clean, fresh feel."},
-{id:6,name:"Kitchen Storage Set",cat:"Kitchen",price:18900,old:null,emoji:"🍱",rating:4.7,sale:0,deal:false,new:true,desc:"Practical storage containers for an organized kitchen."},
-{id:7,name:"Home Cleaning Kit",cat:"Home",price:15900,old:18500,emoji:"🧹",rating:4.6,sale:14,deal:false,new:true,desc:"Everyday cleaning essentials in one convenient kit."},
-{id:8,name:"Classic Tote Bag",cat:"Fashion",price:11900,old:null,emoji:"👜",rating:4.7,sale:0,deal:false,new:true,desc:"Simple, versatile tote for everyday use."},
-{id:9,name:"Chocolate Cookies",cat:"Food",price:6900,old:7900,emoji:"🍪",rating:4.8,sale:13,deal:false,new:false,desc:"Crispy chocolate cookies for a sweet snack."},
-{id:10,name:"Herbal Tea Box",cat:"Drinks",price:9800,old:null,emoji:"🍵",rating:4.7,sale:0,deal:false,new:true,desc:"A calming selection for tea time."},
-{id:11,name:"Bluetooth Speaker",cat:"Electronics",price:45900,old:49900,emoji:"🔊",rating:4.5,sale:8,deal:false,new:true,desc:"Compact wireless speaker for music anywhere."},
-{id:12,name:"Soft Bath Towel",cat:"Home",price:14500,old:null,emoji:"🛁",rating:4.8,sale:0,deal:false,new:false,desc:"Soft everyday towel with a comfortable feel."}
-];
-const cats=[["🍎","Food","Food"],["🥤","Drinks","Drinks"],["🍪","Snacks","Food"],["🧴","Personal Care","Personal Care"],["🏠","Home","Home"],["🍳","Kitchen","Kitchen"],["👕","Fashion","Fashion"],["📱","Electronics","Electronics"],["🎁","Lifestyle","Other"]];
-let cart=JSON.parse(localStorage.getItem("akkl_cart")||"{}");
-let wish=JSON.parse(localStorage.getItem("akkl_wish")||"[]");
-
-const money=n=>n.toLocaleString()+" MMK";
-function save(){localStorage.setItem("akkl_cart",JSON.stringify(cart));localStorage.setItem("akkl_wish",JSON.stringify(wish));updateCounts()}
-function updateCounts(){document.getElementById("cartCount").textContent=Object.values(cart).reduce((a,b)=>a+b,0);document.getElementById("wishCount").textContent=wish.length}
-function card(p){return `<div class="product">
-<div class="product-img"><span>${p.emoji}</span>${p.sale?`<span class="sale">${p.sale}% OFF</span>`:""}<button class="heart ${wish.includes(p.id)?"active":""}" onclick="toggleWish(${p.id})">${wish.includes(p.id)?"♥":"♡"}</button></div>
-<div class="product-body"><div class="product-name">${p.name}</div><div class="rating">★★★★★ <span style="color:#8b8d99">${p.rating}</span></div>
-<div class="price">${money(p.price)} ${p.old?`<span class="old">${money(p.old)}</span>`:""}</div>
-<button class="add" onclick="addCart(${p.id})">🛒 Add to Cart</button>
-<button class="link" style="width:100%;padding:9px" onclick="openProduct(${p.id})">View Details</button></div></div>`}
-function render(list,id){document.getElementById(id).innerHTML=list.map(card).join("")||`<div class="empty" style="grid-column:1/-1">No products found.</div>`}
-function init(){
-document.getElementById("categoryGrid").innerHTML=cats.map(c=>`<button class="cat" onclick="filterCategory('${c[2]}')"><span class="cat-icon">${c[0]}</span><b>${c[1]}</b></button>`).join("");
-render(products.filter(p=>p.deal),"dealGrid");render(products,"productGrid");render(products.filter(p=>p.new),"newGrid");updateCounts();
-}
-function addCart(id){cart[id]=(cart[id]||0)+1;save();toast("Added to cart 🛒");}
-function toggleWish(id){wish=wish.includes(id)?wish.filter(x=>x!==id):[...wish,id];save();render(products,"productGrid");toast(wish.includes(id)?"Added to wishlist ♥":"Removed from wishlist");}
-function openProduct(id){const p=products.find(x=>x.id===id);showModal(`<button class="close" onclick="closeModal()">×</button><div class="modal-product"><div class="modal-image">${p.emoji}</div><div><div class="eyebrow" style="color:var(--primary)">${p.cat}</div><h2>${p.name}</h2><div class="rating">★★★★★ ${p.rating}</div><div class="price" style="font-size:28px">${money(p.price)}</div><p style="color:var(--muted);line-height:1.7">${p.desc}</p><div class="summary">🟢 <b>In Stock</b><br><small>Available for ordering</small></div><button class="btn btn-dark" style="width:100%" onclick="addCart(${p.id});closeModal()">🛒 Add to Cart</button><button class="btn btn-outline" style="width:100%;margin-top:9px" onclick="openCheckout();closeModal()">Buy Now →</button></div></div>`)}
-function openCart(){let entries=Object.entries(cart);showModal(`<button class="close" onclick="closeModal()">×</button><h2>🛒 Your Cart</h2>${entries.length?entries.map(([id,q])=>{let p=products.find(x=>x.id==id);return `<div class="cart-row"><div class="mini-img">${p.emoji}</div><div><b>${p.name}</b><div>${money(p.price)}</div><div class="qty"><button onclick="changeQty(${p.id},-1)">−</button>${q}<button onclick="changeQty(${p.id},1)">+</button></div></div><b>${money(p.price*q)}</b></div>`}).join("")+`<div class="summary"><b>Total: ${money(cartTotal())}</b></div><button class="btn btn-dark" style="width:100%" onclick="openCheckout()">Proceed to Checkout →</button>`:`<div class="empty">Your cart is empty.<br><br><button class="btn btn-dark" onclick="closeModal()">Continue Shopping</button></div>`}`)}
-function cartTotal(){return Object.entries(cart).reduce((s,[id,q])=>s+products.find(p=>p.id==id).price*q,0)}
-function changeQty(id,n){cart[id]=(cart[id]||0)+n;if(cart[id]<=0)delete cart[id];save();openCart()}
-function openWishlist(){let list=products.filter(p=>wish.includes(p.id));showModal(`<button class="close" onclick="closeModal()">×</button><h2>♥ Wishlist</h2>${list.length?`<div class="products">${list.map(card).join("")}</div>`:`<div class="empty">Your wishlist is empty.</div>`}`)}
-function openCheckout(){
-if(!Object.keys(cart).length){toast("Your cart is empty");return}
-showModal(`<button class="close" onclick="closeModal()">×</button><h2>Checkout</h2><p class="section-sub">Complete your details and payment.</p>
-<form onsubmit="submitOrder(event)">
-<label>Full Name<input required name="name" placeholder="Your name"></label>
-<label>Phone Number<input required name="phone" placeholder="09xxxxxxxxx"></label>
-<label>Delivery Address<textarea required name="address" rows="3" placeholder="Full delivery address"></textarea></label>
-<label>Payment Method<select required name="method" onchange="paymentInfo(this.value)"><option value="">Select payment method</option><option>KPay</option><option>Wave Pay</option><option>Banking</option></select></label>
-<div class="summary" id="paymentInfo">Select a payment method to see payment details.</div>
-<div class="summary"><b>Order Total: ${money(cartTotal())}</b></div>
-<button class="btn btn-dark" style="width:100%">Place Order & Upload Receipt →</button>
-</form>`)}
-function paymentInfo(v){document.getElementById("paymentInfo").innerHTML=v==="KPay"||v==="Wave Pay"?`<b>${v}</b><br><strong>09-793306685</strong><br><small>After payment, upload your receipt for verification.</small>`:v==="Banking"?`<b>Bank Transfer</b><br><strong>BNY</strong><br><small>After transfer, upload your receipt for verification.</small>`:"Select a payment method to see payment details."}
-function submitOrder(e){e.preventDefault();const f=new FormData(e.target);const order="ORD-"+Date.now().toString().slice(-7);const total=cartTotal();cart={};save();showModal(`<button class="close" onclick="closeModal()">×</button><div style="text-align:center"><div style="font-size:60px">🎉</div><h2>Order Received!</h2><p>Your order <b>#${order}</b> has been created.</p><div class="summary"><b>Payment: ${f.get("method")}</b><br>Amount: ${money(total)}<br><span style="color:#b87800">🟡 Payment Verification</span></div><label>Upload Payment Receipt<input id="receipt" type="file" accept=".jpg,.jpeg,.png,.pdf" required></label><p style="font-size:12px;color:var(--muted)">Your receipt will be reviewed before the order is processed.</p><button class="btn btn-dark" style="width:100%" onclick="finishReceipt('${order}')">Submit Payment Receipt</button></div>`)}
-function finishReceipt(order){const f=document.getElementById("receipt");if(!f.files.length){toast("Please select your receipt");return}closeModal();toast("Receipt submitted for verification ✓")}
-function filterCategory(cat){let list=products.filter(p=>p.cat===cat);document.getElementById("productsSection").scrollIntoView();render(list,"productGrid")}
-function showAll(){render(products,"productGrid");document.getElementById("productsSection").scrollIntoView()}
-document.getElementById("searchInput").addEventListener("input",e=>{const q=e.target.value.toLowerCase();render(products.filter(p=>(p.name+" "+p.cat+" "+p.desc).toLowerCase().includes(q)),"productGrid");document.getElementById("productsSection").scrollIntoView({behavior:"smooth"})})
-function showModal(html){document.getElementById("modalContent").innerHTML=html;document.getElementById("modal").classList.add("show")}
-function closeModal(){document.getElementById("modal").classList.remove("show")}
-document.getElementById("modal").addEventListener("click",e=>{if(e.target.id==="modal")closeModal()});
-function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.remove("show"),2200)}
-init();
+const P=[
+{id:1,n:"ပုစွန်ဆီ (5Kg)",c:"အစားအသောက်",p:4800,o:6000,d:"-20%",e:"🌾",r:5},
+{id:2,n:"စားသုံးဆီ (1L)",c:"အစားအသောက်",p:3400,o:4000,d:"-15%",e:"🧴",r:5},
+{id:3,n:"NESCAFÉ Classic (200g)",c:"အချိုရည်",p:7200,o:8000,d:"-10%",e:"☕",r:5},
+{id:4,n:"MAMA ခေါက်ဆွဲ (10 ထုပ်)",c:"မုန့်",p:2250,o:3000,d:"-25%",e:"🍜",r:4},
+{id:5,n:"နေကာမျက်မှန်",c:"ဖက်ရှင်",p:9500,o:12000,d:"-21%",e:"🕶️",r:5},
+{id:6,n:"Bluetooth နားကြပ်",c:"အီလက်ထရောနစ်",p:18500,o:22000,d:"-16%",e:"🎧",r:5},
+{id:7,n:"ကျောပိုးအိတ်",c:"ဖက်ရှင်",p:22000,o:28000,d:"-21%",e:"🎒",r:5},
+{id:8,n:"Smart Watch Series 8",c:"အီလက်ထရောနစ်",p:55000,o:65000,d:"-15%",e:"⌚",r:5},
+{id:9,n:"အရည်အသွေးမြင့် ဆပ်ပြာ",c:"ကိုယ်ရေး",p:5800,o:7000,d:"-17%",e:"🧼",r:5},
+{id:10,n:"မီးဖိုချောင်အိုး",c:"မီးဖို",p:28000,o:35000,d:"-20%",e:"🍲",r:5},
+{id:11,n:"အိမ်သုံးထိုင်ခုံ",c:"အိမ်သုံး",p:45000,o:52000,d:"-13%",e:"🪑",r:4},
+{id:12,n:"လက်ကိုင်ဖုန်း",c:"အီလက်ထရောနစ်",p:390000,o:430000,d:"-9%",e:"📱",r:5}];
+let C=JSON.parse(localStorage.getItem("akkC")||"[]"),W=JSON.parse(localStorage.getItem("akkW")||"[]");
+const money=x=>x.toLocaleString()+" ကျပ်", stars=n=>"★".repeat(n)+"☆".repeat(5-n);
+function card(p){return `<article class="product"><div class="pic"><span class="off">${p.d}</span><button class="heart ${W.includes(p.id)?"on":""}" onclick="wish(${p.id})">${W.includes(p.id)?"♥":"♡"}</button><span>${p.e}</span></div><div class="body"><div class="name">${p.n}</div><div class="stars">${stars(p.r)} <small style="color:#999">(${p.r*3+2})</small></div><div class="price">${money(p.p)} <span class="old">${money(p.o)}</span></div><button class="add" onclick="add(${p.id})">＋ စျေးဝယ်ခြင်းတောင်းထဲထည့်မည်</button></div></article>`}
+function render(a=P){document.getElementById("grid").innerHTML=a.slice(0,8).map(card).join("");document.getElementById("dealsGrid").innerHTML=P.slice(0,4).map(card).join("");document.getElementById("newGrid").innerHTML=P.slice(4,12).map(card).join("")}
+function add(id){let x=C.find(v=>v.id===id);x?x.q++:C.push({id,q:1});save();toast("ကုန်ပစ္စည်းကို စျေးဝယ်ခြင်းတောင်းထဲ ထည့်ပြီးပါပြီ 🛒")}
+function wish(id){W=W.includes(id)?W.filter(x=>x!==id):[...W,id];save();render()}
+function filterCat(c){let a=P.filter(x=>x.c.includes(c));render(a);document.getElementById("products").scrollIntoView({behavior:"smooth"})}
+function search(q){q=q.toLowerCase();render(q?P.filter(x=>(x.n+x.c).toLowerCase().includes(q)):P)}
+function reset(){render(P)}
+function save(){localStorage.setItem("akkC",JSON.stringify(C));localStorage.setItem("akkW",JSON.stringify(W));update()}
+function update(){document.getElementById("cc").textContent=C.reduce((s,x)=>s+x.q,0);document.getElementById("wish").textContent=W.length;let b=document.getElementById("cartBody");if(!C.length)b.innerHTML="<div style='padding:25px;text-align:center;color:#888'>🛒 စျေးဝယ်ခြင်းတောင်း လွတ်နေပါသည်။</div>";else b.innerHTML=C.map(x=>{let p=P.find(v=>v.id===x.id);return `<div class="row"><div class="thumb">${p.e}</div><div class="info"><b>${p.n}</b><small>${money(p.p)}</small><div class="qty"><button onclick="qty(${p.id},-1)">−</button>${x.q}<button onclick="qty(${p.id},1)">+</button><button onclick="removeItem(${p.id})">×</button></div></div></div>`}).join("");document.getElementById("total").textContent=money(C.reduce((s,x)=>s+P.find(p=>p.id===x.id).p*x.q,0))}
+function qty(id,d){let x=C.find(v=>v.id===id);x.q+=d;if(x.q<1)C=C.filter(v=>v.id!==id);save()}function removeItem(id){C=C.filter(v=>v.id!==id);save()}
+function cartToggle(){document.getElementById("cart").classList.toggle("open")}
+function checkout(){if(!C.length){toast("အရင်ဆုံး ကုန်ပစ္စည်းတစ်ခု ထည့်ပေးပါ 🛒");return}document.getElementById("overlay").classList.add("open")}
+function closeModal(){document.getElementById("overlay").classList.remove("open")}
+function pay(el){document.querySelectorAll(".pay").forEach(x=>x.classList.remove("sel"));el.classList.add("sel")}
+function submitOrder(){if(!document.getElementById("name").value.trim()||!document.getElementById("phone").value.trim()||!document.getElementById("address").value.trim()||!document.getElementById("receipt").files.length){toast("အမည်၊ ဖုန်း၊ လိပ်စာနှင့် Receipt အားလုံးဖြည့်ပေးပါ။");return}let id="AKK-"+Math.floor(100000+Math.random()*900000);localStorage.setItem("akkOrder",JSON.stringify({id,status:"Payment စစ်ဆေးနေသည်",time:new Date().toLocaleString()}));C=[];save();closeModal();toast("အမှာစာ "+id+" တင်ပြီးပါပြီ။ Payment စစ်ဆေးနေပါသည်။")}
+function toast(s){let t=document.getElementById("toast");t.textContent=s;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2500)}
+let si=0,ss=document.querySelectorAll(".slide"),dd=document.getElementById("dots");ss.forEach((_,i)=>{let d=document.createElement("button");d.className="dot "+(!i?"on":"");d.onclick=()=>go(i);dd.appendChild(d)});function go(i){si=(i+ss.length)%ss.length;ss.forEach((x,j)=>x.classList.toggle("on",j===si));document.querySelectorAll(".dot").forEach((x,j)=>x.classList.toggle("on",j===si))}function move(n){go(si+n)}setInterval(()=>move(1),6000);
+render();update();
 </script>
 </body>
 </html>
